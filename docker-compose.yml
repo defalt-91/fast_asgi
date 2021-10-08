@@ -5,14 +5,16 @@ services:
     image:
       nginx:1.21
     privileged: false
+    depends_on:
+      - databases
+      - asgi_app
+      - pgadmin
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./Frontend/app:/var/nginx/www
     ports:
       - "80:80"
       - "443:443"
-    depends_on:
-      - asgi_app
     networks:
       Asgi_public_network:
       Asgi_private_network:
@@ -30,8 +32,9 @@ services:
       - Backend/app/configurations/.env
     volumes:
       - ./Backend/app:/app/
-#    command:
     command: gunicorn -c python:gunicorn_conf
+    depends_on:
+      - databases
     #    restart: on-failure
     networks:
       Asgi_private_network:
@@ -49,18 +52,20 @@ services:
     networks:
       Asgi_hidden_network:
 
-#  Asgi_staticfiles:
-#    build:
-#      context: ./Frontend
-#      dockerfile: frontend.Dockerfile
-#      args:
-#        mode: development
-#    networks:
-#      Asgi_private_network:
-#        - aliases:
-#            - staticfiles
+  pgadmin:
+    image: dpage/pgadmin4
+    networks:
+      Asgi_hidden_network:
+      Asgi_private_network:
+    depends_on:
+      - databases
+    env_file:
+      Backend/app/configurations/.pgadmin.env
+    volumes:
+      - pg_admin_data:/var/lib/pgadmin
 
-#
+
+
 networks:
   Asgi_public_network:
     driver: bridge
@@ -75,5 +80,6 @@ networks:
     name: hidden_one
 volumes:
   fast_db_data:
+  pg_admin_data:
 #configs:
 #secrets:
