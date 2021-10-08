@@ -1,0 +1,75 @@
+version: "3.9"
+services:
+  proxy:
+    container_name: asgi_proxy
+    image:
+      nginx:1.21
+    privileged: false
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./Frontend/app:/var/nginx/www
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - asgi_app
+    networks:
+      Asgi_public_network:
+      Asgi_private_network:
+  #    restart: on-failure
+
+  asgi_app:
+    image: asgi_app_image
+    build:
+      dockerfile: backend.dockerfile
+      context: Backend/app
+    container_name: python_asgi
+    environment:
+      DOCKER_MODE: "True"
+    env_file:
+      - Backend/app/configurations/.env
+    volumes:
+      - ./Backend/app:/app/
+#    command:
+    command: gunicorn -c python:gunicorn_conf
+    #    restart: on-failure
+    networks:
+      Asgi_private_network:
+      Asgi_hidden_network:
+  databases:
+    image: postgres:latest
+    volumes:
+      - fast_db_data:/var/lib/postgresql/data
+    env_file:
+      - ./Backend/app/configurations/.env
+    networks:
+      Asgi_hidden_network:
+
+#  Asgi_staticfiles:
+#    build:
+#      context: ./Frontend
+#      dockerfile: frontend.Dockerfile
+#      args:
+#        mode: development
+#    networks:
+#      Asgi_private_network:
+#        - aliases:
+#            - staticfiles
+
+#
+networks:
+  Asgi_public_network:
+    driver: bridge
+    internal: false
+    name: public
+  Asgi_private_network:
+    driver: bridge
+    internal: true
+  Asgi_hidden_network:
+    driver: bridge
+    internal: true
+    name: hidden_one
+volumes:
+  fast_db_data:
+#configs:
+#secrets:
