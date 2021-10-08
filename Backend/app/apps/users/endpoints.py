@@ -2,9 +2,9 @@ from fastapi import Depends
 from fastapi import Security
 from fastapi.routing import APIRouter
 from .schemas import User
-from services.security import get_current_active_user, get_current_user, oauth2_scheme
+from services.security import get_current_active_user, get_current_user
 # from ...configurations.settings_json import cors_configs,
-from configurations.settings_env import settings
+from core.base_settings import settings
 
 user_router = APIRouter()
 

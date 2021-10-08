@@ -8,3 +8,7 @@ class User(BaseModel):
 	email: Optional[str] = None
 	full_name: Optional[str] = None
 	is_active: Optional[bool] = None
+
+
+class UserInDB(User):
+	hashed_password: str

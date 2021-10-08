@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from pydantic import (
 	AnyHttpUrl, BaseSettings, EmailStr, HttpUrl, PostgresDsn, validator,
@@ -9,7 +9,8 @@ from pydantic import (
 
 class Settings(BaseSettings):
 	DEBUG: bool = False
-	# DOCKER_MODE = Optional[bool] = False
+	# DOCKER_MODE = Optional[bool] = True
+
 	""" APPLICATION SETTINGS """
 	""" Server Settings"""
 	API_PREFIX: Optional[str]
@@ -28,14 +29,28 @@ class Settings(BaseSettings):
 	EMAILS_FROM_EMAIL: Optional[EmailStr]
 	
 	""" Postgresql Settings """
-	POSTGRES_SERVER: Optional[str]
-	POSTGRES_USER: Optional[str]
-	POSTGRES_PASSWORD: Optional[str]
-	POSTGRES_DB: Optional[str]
+	POSTGRES_SERVER: str
+	POSTGRES_USER: str
+	POSTGRES_PASSWORD: str
+	POSTGRES_DB: str
+	SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
+	
 	""" Sqlite3 """
-	DATABASE_URL: Optional[str]
 	DATABASE_USER: Optional[str]
 	DATABASE_PASSWORD: Optional[str]
+	
+	@validator('SQLALCHEMY_DATABASE_URI', pre=True)
+	def assemble_db_connection(cls, v: Optional[str], values: Dict[str, any]) -> any:
+		if isinstance(v, str):
+			return v
+		else:
+			return PostgresDsn.build(
+					scheme="postgresql",
+					host=values.get("POSTGRES_SERVER"),
+					user=values.get("POSTGRES_USER"),
+					password=values.get("POSTGRES_PASSWORD"),
+					path=f"/{values.get('POSTGRES_DB') or ''}",
+			)
 	
 	""" Gunicorn Configs """
 	WORKERS_PER_CORE: Optional[int or bool] = False
@@ -55,6 +70,7 @@ class Settings(BaseSettings):
 	ALLOWED_METHODS: List[str] = []
 	ALLOWED_CREDENTIALS: bool = False
 	ALLOWED_ORIGINS: Optional[List[str]] = []
+	DATABASE_URL: Optional[str] = None
 	
 	@validator("DATABASE_URL", pre=True)
 	def get_arman(cls, v: Optional[str], values: Dict[str, Any]):

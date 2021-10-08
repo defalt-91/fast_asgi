@@ -1,6 +1,6 @@
 from fastapi.middleware.cors import CORSMiddleware
 
-from configurations.settings_env import settings
+from core.base_settings import settings
 
 CORS = {
 		"middleware_class"  : CORSMiddleware,

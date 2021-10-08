@@ -10,7 +10,7 @@ from services.security import (
 	create_access_token,
 	pwd_context,
 )
-from configurations.settings_env import settings
+from core.base_settings import settings
 token_router = APIRouter()
 
 fake_users_db = {

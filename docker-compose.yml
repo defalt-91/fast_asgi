@@ -40,8 +40,12 @@ services:
     image: postgres:latest
     volumes:
       - fast_db_data:/var/lib/postgresql/data
-    env_file:
-      - ./Backend/app/configurations/.env
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_SERVER: databases
+      POSTGRES_USER: postgres
+      POSTGRES_DB: fastdb
+      PGDATA: /var/lib/postgresql/data/pgdata
     networks:
       Asgi_hidden_network:
 

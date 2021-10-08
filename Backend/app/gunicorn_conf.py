@@ -10,10 +10,10 @@ from gunicorn.config import (
 	PostRequest,
 	PostWorkerInit,
 	Postfork,
-	PreExec, PreRequest, Prefork, WhenReady, WorkerAbort, WorkerExit, WorkerInt,
+	PreExec, Prefork, WhenReady, WorkerAbort, WorkerExit, WorkerInt,
 )
 
-from configurations.settings_env import settings
+from core.base_settings import settings
 
 workers_per_core_str = settings.WORKERS_PER_CORE
 max_workers_str = settings.MAX_WORKERS

@@ -2,11 +2,10 @@ from fastapi.responses import StreamingResponse
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from apps.routers import api_router
-from configurations.settings_env import settings
+from core.base_router import api_router
+from core.base_settings import settings
 from utils.cors_middleware import CORS
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 some_file_path = "/home/defalt91/User_Authentication.mkv"
 

@@ -1,6 +1,6 @@
 import uuid
 from datetime import timedelta, datetime
-from typing import Dict, List, Literal, Optional
+from typing import List, Optional
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import (
 	OAuth2PasswordBearer,
@@ -11,10 +11,11 @@ from pydantic import ValidationError
 
 from .scopes import ScopeTypes, all_scopes
 from apps.token.schemas import TokenData
-from apps.users.models import UserInDB, User
+from apps.users.models import User
+from apps.users.schemas import UserInDB
 from fastapi import status
 from jose import ExpiredSignatureError, JWTError, jwt
-from configurations.settings_env import settings
+from core.base_settings import settings
 
 from passlib.context import CryptContext
 
@@ -83,9 +84,9 @@ def create_access_token(
 		expire = datetime.utcnow() + expires_delta
 	else:
 		expire = datetime.utcnow() + timedelta(minutes=15)
-	to_encode.update({"exp": expire})
+	to_encode.update({ "exp": expire })
 	if using_jit:
-		to_encode.update({'jit': uuid.uuid4().hex})
+		to_encode.update({ 'jit': uuid.uuid4().hex })
 	encoded_jwt = jwt.encode(claims=to_encode, key=settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 	return encoded_jwt
 
@@ -105,7 +106,7 @@ async def get_current_user(
 			detail="Could not validate credentials",
 	):
 		if headers is None:
-			headers = {"WWW-Authenticate": authenticate_value}
+			headers = { "WWW-Authenticate": authenticate_value }
 		return HTTPException(
 				status_code=status_code,
 				detail=detail,
@@ -123,7 +124,7 @@ async def get_current_user(
 			raise HTTPException(
 					status_code=status.HTTP_406_NOT_ACCEPTABLE,
 					detail="Not acceptable scope",
-					headers={"WWW-Authenticate": authenticate_value},
+					headers={ "WWW-Authenticate": authenticate_value },
 			)
 		token_data = TokenData(scopes=token_scopes, username=username)
 	except ExpiredSignatureError:
@@ -144,7 +145,7 @@ async def get_current_user(
 			raise HTTPException(
 					status_code=status.HTTP_401_UNAUTHORIZED,
 					detail="Not enough permissions",
-					headers={"WWW-Authenticate": authenticate_value},
+					headers={ "WWW-Authenticate": authenticate_value },
 			)
 	return user
 
