@@ -28,8 +28,7 @@ services:
     container_name: python_asgi
     environment:
       DOCKER_MODE: "True"
-    env_file:
-      - Backend/app/configurations/.env
+    env_file: .env
     volumes:
       - ./Backend/app:/app/
     command: gunicorn -c python:gunicorn_conf
@@ -43,12 +42,7 @@ services:
     image: postgres:latest
     volumes:
       - fast_db_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_SERVER: databases
-      POSTGRES_USER: postgres
-      POSTGRES_DB: fastdb
-      PGDATA: /var/lib/postgresql/data/pgdata
+    env_file: .env
     networks:
       Asgi_hidden_network:
 
@@ -59,8 +53,7 @@ services:
       Asgi_private_network:
     depends_on:
       - databases
-    env_file:
-      Backend/app/configurations/.pgadmin.env
+    env_file: .env
     volumes:
       - pg_admin_data:/var/lib/pgadmin
 

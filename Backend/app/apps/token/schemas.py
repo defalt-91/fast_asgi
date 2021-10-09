@@ -8,6 +8,6 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-	username: Optional[str] = None
+	email: Optional[str] = None
 	scopes: List[str] = []
 	jti: Optional[str] = None

@@ -1,33 +1,30 @@
 from datetime import timedelta
-
+from sqlalchemy.orm.session import Session
 from fastapi import Depends, HTTPException
 from fastapi.routing import APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
 from starlette import status
+
+from services.db_service import get_db
 from .schemas import Token
 from services.security import (
-	authenticate_user,
 	create_access_token,
-	pwd_context,
 )
 from core.base_settings import settings
-token_router = APIRouter()
+from ..users.crud_user import user as crud_user
 
-fake_users_db = {
-		"defalt91": {
-				"username"       : "defalt91", "full_name": "John Doe", "email": "johndoe@example.com",
-				"hashed_password": pwd_context.hash("secret"),
-				"is_active"      : False,
-		}
-}
+token_router = APIRouter()
 
 
 # /token
 @token_router.post("/", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-	user = authenticate_user(
-			db=fake_users_db,
-			username=form_data.username,
+async def login_for_access_token(
+		form_data: OAuth2PasswordRequestForm = Depends(),
+		db: Session = Depends(get_db)
+):
+	user = crud_user.authenticate(
+			db=db,
+			email=form_data.username,
 			password=form_data.password
 	)
 	if not user:
@@ -36,8 +33,10 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 				detail="Incorrect username or password",
 				headers={"WWW-Authenticate": "Bearer"}
 		)
+	form_data.scopes.append('me')
+	print(form_data.scopes)
 	access_token = create_access_token(
-			data={"sub": user.username, "scopes": form_data.scopes},
+			data={"sub": user.email, "scopes": form_data.scopes},
 			expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRATION_MINUTES),
 	)
 	return {"access_token": access_token, "token_type": "bearer"}

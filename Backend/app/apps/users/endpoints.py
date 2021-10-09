@@ -1,12 +1,25 @@
 from fastapi import Depends
 from fastapi import Security
 from fastapi.routing import APIRouter
-from .schemas import User
+from .schemas import  User
 from services.security import get_current_active_user, get_current_user
-# from ...configurations.settings_json import cors_configs,
 from core.base_settings import settings
+from .user_service import create_user
 
 user_router = APIRouter()
+
+
+@user_router.post(
+		"/register",
+		response_model=User,
+		response_model_exclude={"is_active"},
+		response_model_by_alias=True,
+		)
+async def create_user(
+		user_created_back_data=Depends(create_user),
+):
+	if user_created_back_data:
+		return user_created_back_data
 
 
 @user_router.get("/profile/", response_model=User)

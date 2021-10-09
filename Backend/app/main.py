@@ -1,9 +1,9 @@
 from uvicorn.main import run
-from .configurations.settings_json import read_json
+# from .configurations.settings_json import read_json
 
 
 if __name__ == '__main__':
-	read_json()
+	# read_json()
 	run(
 			app="app:app",
 			port=8000,
