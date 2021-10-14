@@ -13,8 +13,19 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 	def get_user_by_email(self, db: Session, email: EmailStr) -> Optional[User]:
 		return db.query(User).filter(User.email == email).first()
 	
-	def authenticate(self, db: Session, email: EmailStr, password: str) -> Optional[User]:
+	def get_user_by_username(self, db: Session, username: str) -> Optional[User]:
+		return db.query(User).filter(User.username == username).first()
+	
+	def authenticate_by_email(self, db: Session, email: EmailStr, password: str) -> Optional[User]:
 		login_user = self.get_user_by_email(db=db, email=email)
+		if not login_user:
+			return None
+		if not verify_password(plain_password=password, hashed_password=login_user.hashed_password):
+			return None
+		return login_user
+	
+	def authenticate_by_username(self, db: Session, username: str, password: str) -> Optional[User]:
+		login_user = self.get_user_by_username(db=db, username=username)
 		if not login_user:
 			return None
 		if not verify_password(plain_password=password, hashed_password=login_user.hashed_password):
@@ -30,6 +41,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 	def create(self, db: Session, *, obj_in: UserCreate) -> User:
 		db_obj = User(
 				email=obj_in.email,
+				username=obj_in.username,
 				hashed_password=get_password_hash(obj_in.raw_password),
 				full_name=obj_in.full_name
 		)

@@ -5,7 +5,7 @@ from pydantic import BaseModel, EmailStr
 
 # Shared properties
 class UserBase(BaseModel):
-	# username: Optional[str]
+	username: Optional[str] = None
 	email: Optional[EmailStr] = None
 	full_name: Optional[str] = None
 	is_active: Optional[bool] = None
@@ -13,7 +13,7 @@ class UserBase(BaseModel):
 
 # Properties to receive via API on creation
 class UserCreate(UserBase):
-	email: EmailStr
+	username: str
 	raw_password: str
 
 
@@ -37,6 +37,13 @@ class UserInDB(UserInDBBase):
 # Additional properties to return via API
 class User(UserInDBBase):
 	id: Optional[int] = None
+	username: Optional[str] = None
+	full_name: Optional[str] = None
+# is_active: Optional[bool] = None
+
+
+class UserProfile:
+	username: Optional[str] = None
 	email: Optional[EmailStr] = None
 	full_name: Optional[str] = None
-	# is_active: Optional[bool] = None
+	id: Optional[int] = None

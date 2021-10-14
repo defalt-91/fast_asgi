@@ -9,5 +9,22 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
 	email: Optional[str] = None
+	username: Optional[str] = None
 	scopes: List[str] = []
 	jti: Optional[str] = None
+
+
+class TokenInDB(BaseModel):
+	jwt: str
+	user_id: int
+	
+	class Config:
+		orm_mode = True
+
+
+class TokenCreate(TokenInDB):
+	pass
+
+
+class TokenUpdate(TokenInDB):
+	pass

@@ -3,14 +3,14 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, Union
 
 from pydantic import (
-	AnyHttpUrl, BaseSettings, EmailStr, HttpUrl, PostgresDsn, validator,
+	BaseSettings, EmailStr, PostgresDsn, validator,
 )
 
 
 class Settings(BaseSettings):
 	DEBUG: bool = False
 	# DOCKER_MODE = Optional[bool] = True
-
+	
 	""" APPLICATION SETTINGS """
 	""" Server Settings"""
 	API_PREFIX: Optional[str]
@@ -92,4 +92,4 @@ a = os.environ.get("DOCKER_MODE")
 if a or a == "True":
 	settings = Settings()
 else:
-	settings = Settings(_env_file=Path(__name__).resolve().parent / "configurations/.env")
+	settings = Settings(_env_file=Path(__name__).resolve().parent.parent.parent / ".env")

@@ -9,7 +9,11 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 some_file_path = "/home/defalt91/User_Authentication.mkv"
 
-app = FastAPI()  # root_path="/"  for behind proxy
+app = FastAPI(
+		# docs_url=None,
+		# redoc_url=None,
+		# openapi_url=None
+)  # root_path="/"  for behind proxy
 
 app.include_router(api_router)
 app.add_middleware(**CORS)
