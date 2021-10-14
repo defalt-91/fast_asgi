@@ -1,26 +1,15 @@
-# from core.database.base_db_class import Base
-# from sqlalchemy.sql.sqltypes import Integer, String, Boolean
-# from sqlalchemy.sql.schema import Column
+from sqlalchemy import Column, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy.types import Integer, String
 
-# if TYPE_CHECKING:
-#     from .item import Item  # noqa: F401
-#
-#
-# class Token(Base):
-# 	id = Column(Integer, autoincrement=True, nullable=False, primary_key=True, unique=True, index=True)
-#
+from core.database.base_db_class import Base
 
-"""
-{
-  "iss": "https://YOUR_DOMAIN/",
-  "sub": "auth0|123456",
-  "aud": [
-    "my-api-identifier",
-    "https://YOUR_DOMAIN/userinfo"
-  ],
-  "azp": "YOUR_CLIENT_ID",
-  "exp": 1489179954,
-  "iat": 1489143954,
-  "scope": "openid profile email address phone read:appointments"
-}
-"""
+
+class Token(Base):
+	id = Column(
+		Integer, autoincrement=True, unique=True,
+		nullable=False, primary_key=True, index=True
+		)
+	jwt = Column(String, nullable=False)
+	user_id = Column(Integer, ForeignKey("user.id"))
+	user = relationship('User', back_populates="tokens")

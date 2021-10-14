@@ -53,9 +53,9 @@ services:
       Asgi_private_network:
     depends_on:
       - databases
-    env_file: .env
-    volumes:
-      - pg_admin_data:/var/lib/pgadmin
+    env_file: .pgadmin.env
+#    volumes:
+#      - pg_admin_data:/var/lib/pgadmin
 
 
 

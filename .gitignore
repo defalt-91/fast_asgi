@@ -7,7 +7,7 @@ __pycache__/
 *.so
 .env
 .pgadmin.env
-
+.gitignore
 # Distribution / packaging
 .Python
 build/
