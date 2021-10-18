@@ -3,7 +3,7 @@ from datetime import timedelta, datetime
 from typing import List, Optional
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import (
-	OAuth2AuthorizationCodeBearer,
+	OAuth2PasswordBearer,
 	SecurityScopes,
 )
 from jose.exceptions import JWTClaimsError
@@ -46,28 +46,27 @@ Jwt_Options = {
 
 # pwd_context_making_changes = pwd_context.load_path(path=Path(__name__).resolve().parent / "services/CryptContext.ini")
 
-# class OAuth2PasswordBearerCookieMode(OAuth2PasswordBearer):
-#
-# 	async def __call__(self, request: Request) -> Optional[str]:
-# 		authorization: str = request.cookies.get('authorization')
-# 		scheme, param = get_authorization_scheme_param(authorization)
-# 		if not authorization or scheme.lower() != "bearer":
-# 			if self.auto_error:
-# 				raise HTTPException(
-# 						status_code=status.HTTP_401_UNAUTHORIZED,
-# 						detail="Not authenticated",
-# 						headers={"WWW-Authenticate": "Bearer"},
-# 				)
-# 			else:
-# 				return None
-# 		return param
+class OAuth2PasswordBearerCookieMode(OAuth2PasswordBearer):
+	
+	async def __call__(self, request: Request) -> Optional[str]:
+		authorization: str = request.cookies.get('authorization')
+		scheme, param = get_authorization_scheme_param(authorization)
+		if not authorization or scheme.lower() != "bearer":
+			if self.auto_error:
+				raise HTTPException(
+						status_code=status.HTTP_401_UNAUTHORIZED,
+						detail="Not authenticated",
+						headers={"WWW-Authenticate": "Bearer"},
+				)
+			else:
+				return None
+		return param
 
 
-oauth2_scheme = OAuth2AuthorizationCodeBearer(
+oauth2_scheme = OAuth2PasswordBearerCookieMode(
 		tokenUrl="Oauth/token",
 		scopes=all_scopes,
-		authorizationUrl='Oauth/authorize',
-		
+		auto_error=True,
 		# scheme_name='pass'
 )
 
@@ -79,7 +78,7 @@ def create_access_token(
 		created_at: Optional[bool] = True,
 		issuer: Optional[str] = "my corporation",
 		audience: List[str] = "http://myawesomesite.io",
-		not_berfore: Optional[int] = 0
+		not_before: Optional[int] = 0
 ):
 	to_encode = data.copy()
 	if expires_delta:
@@ -91,8 +90,8 @@ def create_access_token(
 		to_encode.update({'jit': uuid.uuid4().hex})
 	if created_at:
 		to_encode.update({"iat": datetime.utcnow()})
-	if not_berfore != 0:
-		to_encode.update({"nbf": datetime.utcnow() + timedelta(minutes=not_berfore)})
+	if not_before != 0:
+		to_encode.update({"nbf": datetime.utcnow() + timedelta(minutes=not_before)})
 	else:
 		to_encode.update({"nbf": datetime.utcnow() + timedelta(seconds=1)})
 	if issuer:
@@ -109,8 +108,7 @@ def create_access_token(
 
 async def get_current_user(
 		security_scopes: SecurityScopes,
-		# token: str = Depends(oauth2_scheme),
-		authorization: str = Depends(oauth2_scheme),
+		token: str = Depends(oauth2_scheme),
 		db: Session = Depends(get_db)
 ) -> User:
 	if security_scopes.scopes:
@@ -123,8 +121,9 @@ async def get_current_user(
 			status_code=status.HTTP_401_UNAUTHORIZED,
 			detail="Could not validate credentials",
 	):
-		if headers is None:
-			headers = {"WWW-Authenticate": authenticate_value}
+		
+		# if headers is None:
+		# 	headers = {"WWW-Authenticate": authenticate_value}
 		return HTTPException(
 				status_code=status_code,
 				detail=detail,
@@ -132,15 +131,9 @@ async def get_current_user(
 		)
 	
 	try:
-		headers = jwt.get_unverified_header(authorization)
-		if headers.get('alg') != 'HS256':
-			raise HTTPException(
-					status_code=status.HTTP_403_FORBIDDEN,
-					detail="this token is tampered",
-					headers={"WWW-Authenticate": "Bearer"}
-			)
 		payload = jwt.decode(
-				authorization, settings.SECRET_KEY,
+				token=token,
+				key=settings.SECRET_KEY,
 				algorithms=[settings.ALGORITHM],
 				audience='http://myawesomesite.io',
 				options=Jwt_Options,
@@ -180,10 +173,10 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-		current_user: User = Security(get_current_user, scopes=["me", ])
+		current_user: User = Security(get_current_user, scopes=["me"])
 ) -> User:
 	if not current_user.is_active:
-		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Disabled user")
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
 	return current_user
 
 

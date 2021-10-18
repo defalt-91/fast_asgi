@@ -1,9 +1,10 @@
-from sqlalchemy.ext.declarative import as_declarative, declared_attr
+from sqlalchemy.ext.declarative import as_declarative,  declared_attr
 from typing import Any
+from sqlalchemy import Column, Integer
 
 
 @as_declarative()
-class Base:
+class Base(object):
 	id: Any
 	__name__: str
 	
@@ -11,3 +12,12 @@ class Base:
 	@declared_attr
 	def __tablename__(cls) -> str:
 		return cls.__name__.lower()
+	
+	id = Column(
+		Integer,
+		autoincrement=True,
+		nullable=False,
+		primary_key=True,
+		unique=True,
+		index=True
+	)

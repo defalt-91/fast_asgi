@@ -8,7 +8,6 @@ from utils.cors_middleware import CORS
 from fastapi.middleware.gzip import GZipMiddleware
 
 some_file_path = "/home/defalt91/User_Authentication.mkv"
-
 app = FastAPI(
 		# docs_url=None,
 		# redoc_url=None,
@@ -20,6 +19,7 @@ app.add_middleware(**CORS)
 # app.add_middleware(HTTPSRedirectMiddleware)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 
 
 @app.get("/")

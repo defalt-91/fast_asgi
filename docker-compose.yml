@@ -23,15 +23,18 @@ services:
   asgi_app:
     image: asgi_app_image
     build:
-      dockerfile: backend.dockerfile
       context: Backend/app
+      dockerfile: backend.dockerfile
     container_name: python_asgi
     environment:
       DOCKER_MODE: "True"
     env_file: .env
+
     volumes:
       - ./Backend/app:/app/
-    command: gunicorn -c python:gunicorn_conf
+    command:
+#      sh prestart.sh
+      gunicorn -c python:gunicorn_conf
     depends_on:
       - databases
     #    restart: on-failure

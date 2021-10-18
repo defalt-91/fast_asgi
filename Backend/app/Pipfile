@@ -35,6 +35,10 @@ sqlalchemy = "*"
 python-dotenv = "*"
 email-validator = "*"
 psycopg2 = "*"
+itsdangerous = "*"
+emails = "*"
+tenacity = "*"
+jinja2 = "*"
 
 [dev-packages]
 

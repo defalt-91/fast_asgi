@@ -8,13 +8,13 @@ api_router.include_router(
 		router=token_router,
 		prefix="/Oauth",
 		include_in_schema=True,
-		tags=["Token operations"],
+		tags=["Authorization Server"],
 		deprecated=False,
 )
 
 api_router.include_router(
 		router=accounts,
 		prefix="/accounts",
-		tags=["Authentication"],
+		tags=["Authentication Server"],
 		include_in_schema=True,
 )

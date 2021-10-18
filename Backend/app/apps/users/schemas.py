@@ -9,6 +9,7 @@ class UserBase(BaseModel):
 	email: Optional[EmailStr] = None
 	full_name: Optional[str] = None
 	is_active: Optional[bool] = None
+	is_superuser: Optional[bool] = None
 
 
 # Properties to receive via API on creation
@@ -32,6 +33,7 @@ class UserInDBBase(UserBase):
 # Additional properties stored in DB
 class UserInDB(UserInDBBase):
 	hashed_password: str
+	username: str
 
 
 # Additional properties to return via API
@@ -39,6 +41,8 @@ class User(UserInDBBase):
 	id: Optional[int] = None
 	username: Optional[str] = None
 	full_name: Optional[str] = None
+
+
 # is_active: Optional[bool] = None
 
 
@@ -47,3 +51,7 @@ class UserProfile:
 	email: Optional[EmailStr] = None
 	full_name: Optional[str] = None
 	id: Optional[int] = None
+
+
+class Msg(BaseModel):
+	msg: str
