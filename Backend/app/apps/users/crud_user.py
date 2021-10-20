@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional, Union
 
 from core.base_crud import CRUDBase
-from .schemas import UserCreate, UserInDB, UserUpdate
+from .schemas import UserCreate, UserUpdate
 from .models import User
 from sqlalchemy.orm.session import Session
 from services.password_service import get_password_hash, verify_password
@@ -41,13 +41,29 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 	def is_superuser(user_in: User) -> bool:
 		return user_in.is_superuser
 	
-	def create(self, db: Session, *, obj_in: UserCreate) -> User:
-		hashed_password = get_password_hash(obj_in.raw_password)
+	def create_superuser(self, db: Session, obj_in: UserCreate) -> User:
+		hashed_password = get_password_hash(obj_in.password1)
 		obj = User(
 			email=obj_in.email,
 			username=obj_in.username,
 			hashed_password=hashed_password,
-			full_name=obj_in.full_name
+			full_name=obj_in.full_name,
+			is_superuser=True,
+			is_active=True
+		)
+		db.add(obj)
+		db.commit()
+		db.refresh(obj)
+		return obj
+	
+	def create(self, db: Session, *, obj_in: UserCreate) -> User:
+		hashed_password = get_password_hash(obj_in.password1)
+		obj = User(
+			email=obj_in.email,
+			username=obj_in.username,
+			hashed_password=hashed_password,
+			full_name=obj_in.full_name,
+			is_active=True
 		)
 		
 		db_obj = obj
@@ -67,6 +83,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 			updated_data["hashed_password"] = hashed_pass
 			del updated_data["password"]
 		return super().update(db=db, db_obj=db_obj, obj_in=updated_data)
+
 
 # def remove(self, db: Session, *, id: int) -> User:
 # 	users = db.query(User).filter(User.id == id).first()
