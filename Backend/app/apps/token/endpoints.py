@@ -9,7 +9,7 @@ from fastapi.security import OAuth2PasswordRequestFormStrict
 from starlette import status
 
 from services.db_service import get_db
-from services.security import create_access_token, get_current_user
+from services.security_service import create_access_token, get_current_user
 from core.base_settings import settings
 from apps.users import crud_user
 from ..users import models,schemas

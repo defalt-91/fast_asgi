@@ -12,7 +12,7 @@ from datetime import timedelta
 from fastapi import Depends, HTTPException
 from starlette.responses import RedirectResponse, Response, JSONResponse
 from services.db_service import get_db
-from services.security import create_access_token, get_current_active_user
+from services.security_service import create_access_token, get_current_active_user
 from apps.users import crud_user
 
 blog_router = APIRouter()

@@ -5,8 +5,8 @@ __pycache__/
 *$py.class
 # C extensions
 *.so
-.env
-.pgadmin.env
+Backend/app/configurations/.env
+Backend/app/configurations/.pgadmin.env
 .gitignore
 # Distribution / packaging
 .Python
@@ -108,7 +108,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+Backend/app/configurations/.env
 .venv
 env/
 venv/
@@ -212,7 +212,7 @@ web_modules/
 .yarn-integrity
 
 # dotenv environment variables file
-.env
+Backend/app/configurations/.env
 .env.test
 
 # parcel-bundler cache (https://parceljs.org/)

@@ -10,7 +10,7 @@ services:
       - asgi_app
       - pgadmin
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./Backend/app/configurations/nginx.conf:/etc/nginx/nginx.conf
       - ./Frontend/app:/var/nginx/www
     ports:
       - "80:80"
@@ -28,21 +28,22 @@ services:
     container_name: python_asgi
     environment:
       DOCKER_MODE: "True"
-    env_file: .env
+    env_file: Backend/app/configurations/.env
     volumes:
       - ./Backend/app:/app/
-    command: gunicorn -c python:gunicorn_conf
+    command: gunicorn --reload -c python:configurations.gunicorn_conf
     depends_on:
       - databases
     #    restart: on-failure
     networks:
       Asgi_private_network:
       Asgi_hidden_network:
+      Asgi_public_network:
   databases:
     image: postgres:latest
     volumes:
       - fast_db_data:/var/lib/postgresql/data
-    env_file: .env
+    env_file: Backend/app/configurations/.env
     networks:
       Asgi_hidden_network:
 
@@ -53,7 +54,7 @@ services:
       Asgi_private_network:
     depends_on:
       - databases
-    env_file: .pgadmin.env
+    env_file: Backend/app/configurations/.pgadmin.env
 #    volumes:
 #      - pg_admin_data:/var/lib/pgadmin
 

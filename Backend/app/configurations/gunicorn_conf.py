@@ -1,5 +1,5 @@
-import json
 import multiprocessing
+import os
 from pathlib import Path
 
 from gunicorn.config import (
@@ -33,7 +33,6 @@ workers_per_core = float(workers_per_core_str)
 default_web_concurrency = workers_per_core * cores + 1
 
 if web_concurrency_str:
-	print("cuncurrency got")
 	web_concurrency = int(web_concurrency_str)
 	assert web_concurrency > 0
 else:
@@ -88,7 +87,7 @@ keepalive = int(keepalive_str)
 preload_app = False
 sendfile = None
 reuse_port = False
-# chdir = /home/defalt91/projects/Develops/FastAPI_Ng/Asgi_Backend
+chdir = '/app/'
 daemon = False
 # raw_env = ["FOO=1"]
 user = "1000"
@@ -99,7 +98,7 @@ worker_tmp_dir = str(Path(__name__).resolve().parent / "logs/guni/")
 
 pidfile = str(Path(__name__).resolve().parent / "logs/guni/pid.txt")  # A filename to use for the PID file.
 tmp_upload_dir = None
-secure_scheme_headers = { 'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on' }
+secure_scheme_headers = {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
 # forwarded_allow_ips               = ['127.0.0.1']
 # paste = None
 # pythonpath = None
@@ -117,7 +116,7 @@ loglevel = use_loglevel
 capture_output = False
 logger_class = 'gunicorn.glogging.Logger'
 logconfig = None
-logconfig_dict = { }
+logconfig_dict = {}
 # syslog_addr                       = unix://localhost:514
 # syslog_facility                   = "user"
 # syslog_prefix = "Backend"
@@ -166,6 +165,9 @@ def post_worker_init(worker):
 
 
 def worker_int(worker):
+	#  for reload to work in development
+	os.system(f'kill -HUP {worker.pid}')
+	print('reloadddddd')
 	WorkerInt.worker_int(worker)
 
 
@@ -203,21 +205,20 @@ def on_exit(server):
 
 # For debugging and testing
 log_data = {
-		"loglevel"        : loglevel,
-		"workers"         : workers,
-		# "bind"            : bind,
-		"graceful_timeout": graceful_timeout,
-		"timeout"         : timeout,
-		"keepalive"       : keepalive,
-		"errorlog"        : errorlog,
-		"accesslog"       : accesslog,
-		# Additional, non-gunicorn variables
-		"workers_per_core": workers_per_core,
-		"use_max_workers" : use_max_workers,
-		"host"            : host,
-		"port"            : port,
-		"wsgi_app"        : wsgi_app,
-		"wsgi_app"        : "wsgi_app",
+	"loglevel": loglevel,
+	"workers": workers,
+	# "bind"            : bind,
+	"graceful_timeout": graceful_timeout,
+	"timeout": timeout,
+	"keepalive": keepalive,
+	"errorlog": errorlog,
+	"accesslog": accesslog,
+	# Additional, non-gunicorn variables
+	"workers_per_core": workers_per_core,
+	"use_max_workers": use_max_workers,
+	"host": host,
+	"port": port,
+	"wsgi_app": wsgi_app,
 	
 }
 # print(json.dumps(log_data))

@@ -10,7 +10,7 @@ from apps.users.models import User
 from services.db_service import get_db
 
 from apps.users.user_service import Permissions
-from services.security import get_current_active_user
+from services.security_service import get_current_active_user
 
 
 class PostServices:

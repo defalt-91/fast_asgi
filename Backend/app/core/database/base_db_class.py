@@ -1,10 +1,11 @@
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
 from typing import Any
+from sqlalchemy import Column, Integer
 
 
 @as_declarative()
 class Base:
-	id: Any
+	id: int = Column(Integer, autoincrement=True, unique=True, nullable=False, primary_key=True)
 	__name__: str
 	
 	# Generate __tablename__ automatically

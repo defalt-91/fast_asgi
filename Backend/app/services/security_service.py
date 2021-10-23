@@ -3,7 +3,7 @@ from datetime import timedelta, datetime
 from typing import List, Optional
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import (
-	OAuth2AuthorizationCodeBearer,
+	OAuth2PasswordBearer,
 	SecurityScopes,
 )
 from jose.exceptions import JWTClaimsError
@@ -21,24 +21,24 @@ from sqlalchemy.orm.session import Session
 from fastapi.security.utils import get_authorization_scheme_param
 
 Jwt_Options = {
-		'verify_signature': True,
-		'verify_aud'      : True,
-		'verify_iat'      : True,
-		'verify_exp'      : True,
-		'verify_nbf'      : True,
-		'verify_iss'      : True,
-		'verify_sub'      : True,
-		'verify_jti'      : False,
-		'verify_at_hash'  : True,
-		'require_aud'     : True,
-		'require_iat'     : True,
-		'require_exp'     : True,
-		'require_nbf'     : False,
-		'require_iss'     : True,
-		'require_sub'     : True,
-		'require_jti'     : False,
-		'require_at_hash' : False,
-		'leeway'          : 0,
+	'verify_signature': True,
+	'verify_aud': True,
+	'verify_iat': True,
+	'verify_exp': True,
+	'verify_nbf': True,
+	'verify_iss': True,
+	'verify_sub': True,
+	'verify_jti': False,
+	'verify_at_hash': True,
+	'require_aud': True,
+	'require_iat': True,
+	'require_exp': True,
+	'require_nbf': False,
+	'require_iss': True,
+	'require_sub': True,
+	'require_jti': False,
+	'require_at_hash': False,
+	'leeway': 0,
 }
 
 ''' load config for passlib hashing from .ini file '''
@@ -46,40 +46,40 @@ Jwt_Options = {
 
 # pwd_context_making_changes = pwd_context.load_path(path=Path(__name__).resolve().parent / "services/CryptContext.ini")
 
-# class OAuth2PasswordBearerCookieMode(OAuth2PasswordBearer):
-#
-# 	async def __call__(self, request: Request) -> Optional[str]:
-# 		authorization: str = request.cookies.get('authorization')
-# 		scheme, param = get_authorization_scheme_param(authorization)
-# 		if not authorization or scheme.lower() != "bearer":
-# 			if self.auto_error:
-# 				raise HTTPException(
-# 						status_code=status.HTTP_401_UNAUTHORIZED,
-# 						detail="Not authenticated",
-# 						headers={"WWW-Authenticate": "Bearer"},
-# 				)
-# 			else:
-# 				return None
-# 		return param
+class OAuth2PasswordBearerCookieMode(OAuth2PasswordBearer):
+	
+	async def __call__(self, request: Request) -> Optional[str]:
+		authorization: str = request.cookies.get('authorization')
+		scheme, param = get_authorization_scheme_param(authorization)
+		if not authorization or scheme.lower() != "bearer":
+			if self.auto_error:
+				raise HTTPException(
+					status_code=status.HTTP_401_UNAUTHORIZED,
+					detail="Not authenticated",
+					headers={"WWW-Authenticate": "Bearer"},
+				)
+			else:
+				return None
+		return param
 
 
-oauth2_scheme = OAuth2AuthorizationCodeBearer(
-		tokenUrl="Oauth/token",
-		scopes=all_scopes,
-		authorizationUrl='Oauth/authorize',
-		
-		# scheme_name='pass'
+oauth2_scheme = OAuth2PasswordBearerCookieMode(
+	tokenUrl="Oauth/token",
+	scopes=all_scopes,
+	# authorizationUrl='Oauth/authorize',
+	
+	# scheme_name='pass'
 )
 
 
 def create_access_token(
-		data: dict,
-		using_jit=True,
-		expires_delta: Optional[timedelta] = None,
-		created_at: Optional[bool] = True,
-		issuer: Optional[str] = "my corporation",
-		audience: List[str] = "http://myawesomesite.io",
-		not_berfore: Optional[int] = 0
+	data: dict,
+	using_jit=True,
+	expires_delta: Optional[timedelta] = None,
+	created_at: Optional[bool] = True,
+	issuer: Optional[str] = "my corporation",
+	audience: List[str] = "http://myawesomesite.io",
+	not_berfore: Optional[int] = 0
 ):
 	to_encode = data.copy()
 	if expires_delta:
@@ -100,18 +100,18 @@ def create_access_token(
 	if audience:
 		to_encode.update({"aud": audience})
 	encoded_jwt = jwt.encode(
-			claims=to_encode,
-			key=settings.SECRET_KEY,
-			algorithm=settings.ALGORITHM
+		claims=to_encode,
+		key=settings.SECRET_KEY,
+		algorithm=settings.ALGORITHM
 	)
 	return encoded_jwt
 
 
 async def get_current_user(
-		security_scopes: SecurityScopes,
-		# token: str = Depends(oauth2_scheme),
-		authorization: str = Depends(oauth2_scheme),
-		db: Session = Depends(get_db)
+	security_scopes: SecurityScopes,
+	# token: str = Depends(oauth2_scheme),
+	authorization: str = Depends(oauth2_scheme),
+	db: Session = Depends(get_db)
 ) -> User:
 	if security_scopes.scopes:
 		authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
@@ -119,31 +119,31 @@ async def get_current_user(
 		authenticate_value = f"Bearer"
 	
 	def credentials_exception(
-			headers=None,
-			status_code=status.HTTP_401_UNAUTHORIZED,
-			detail="Could not validate credentials",
+		headers=None,
+		status_code=status.HTTP_401_UNAUTHORIZED,
+		detail="Could not validate credentials",
 	):
 		if headers is None:
 			headers = {"WWW-Authenticate": authenticate_value}
 		return HTTPException(
-				status_code=status_code,
-				detail=detail,
-				headers=headers,
+			status_code=status_code,
+			detail=detail,
+			headers=headers,
 		)
 	
 	try:
 		headers = jwt.get_unverified_header(authorization)
 		if headers.get('alg') != 'HS256':
 			raise HTTPException(
-					status_code=status.HTTP_403_FORBIDDEN,
-					detail="this token is tampered",
-					headers={"WWW-Authenticate": "Bearer"}
+				status_code=status.HTTP_403_FORBIDDEN,
+				detail="this token is tampered",
+				headers={"WWW-Authenticate": "Bearer"}
 			)
 		payload = jwt.decode(
-				authorization, settings.SECRET_KEY,
-				algorithms=[settings.ALGORITHM],
-				audience='http://myawesomesite.io',
-				options=Jwt_Options,
+			authorization, settings.SECRET_KEY,
+			algorithms=[settings.ALGORITHM],
+			audience='http://myawesomesite.io',
+			options=Jwt_Options,
 		)
 		username: str = payload.get("sub")
 		if username is None:
@@ -152,9 +152,9 @@ async def get_current_user(
 			token_scopes: Optional[List[ScopeTypes]] = payload.get("scopes", [])
 		except ValidationError:
 			raise HTTPException(
-					status_code=status.HTTP_406_NOT_ACCEPTABLE,
-					detail="Not acceptable scope",
-					headers={"WWW-Authenticate": authenticate_value},
+				status_code=status.HTTP_406_NOT_ACCEPTABLE,
+				detail="Not acceptable scope",
+				headers={"WWW-Authenticate": authenticate_value},
 			)
 		token_data = TokenData(scopes=token_scopes, username=username)
 	except ExpiredSignatureError:
@@ -172,23 +172,21 @@ async def get_current_user(
 	for scope in security_scopes.scopes:
 		if scope not in token_data.scopes:
 			raise HTTPException(
-					status_code=status.HTTP_401_UNAUTHORIZED,
-					detail="Not enough permissions",
-					headers={"WWW-Authenticate": authenticate_value},
+				status_code=status.HTTP_401_UNAUTHORIZED,
+				detail="Not enough permissions",
+				headers={"WWW-Authenticate": authenticate_value},
 			)
 	return user
 
 
-async def get_current_active_user(
-		current_user: User = Security(get_current_user, scopes=["me", ])
-) -> User:
+async def get_current_active_user(current_user: User = Security(get_current_user, scopes=["me", ])) -> User:
 	if not current_user.is_active:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Disabled user")
 	return current_user
 
 
 def get_current_active_superuser(
-		current_user: User = Depends(get_current_user),
+	current_user: User = Depends(get_current_user),
 ) -> User:
 	# if not crud.user.is_superuser(current_user):
 	# 	raise HTTPException(
