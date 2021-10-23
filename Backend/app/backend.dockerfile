@@ -2,7 +2,7 @@ FROM python:3.9
 
 WORKDIR /app/
 #USER gunicorn
-# Set environment variables
+
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 COPY ./Pipfile ./Pipfile.lock  /app/

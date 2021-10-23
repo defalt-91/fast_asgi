@@ -3,18 +3,18 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, Union
 
 from pydantic import (
-	BaseSettings, EmailStr, PostgresDsn, validator,
+	AnyHttpUrl, BaseSettings, EmailStr, HttpUrl, PostgresDsn, validator,
 )
 
 
 class Settings(BaseSettings):
 	DEBUG: bool = False
 	# DOCKER_MODE = Optional[bool] = True
-	
+
 	""" APPLICATION SETTINGS """
 	""" Server Settings"""
 	API_PREFIX: Optional[str]
-	PROJECT_NAME: Optional[str]
+	
 	""" JWT SETTINGS"""
 	SECRET_KEY: Optional[str]
 	ACCESS_TOKEN_EXPIRATION_MINUTES: Optional[int]
@@ -26,20 +26,7 @@ class Settings(BaseSettings):
 	SMTP_HOST: Optional[str]
 	SMTP_USER: Optional[str]
 	SMTP_PASSWORD: Optional[str]
-	EMAILS_FROM_NAME:Optional[str]
 	EMAILS_FROM_EMAIL: Optional[EmailStr]
-	EMAIL_RESET_TOKEN_EXPIRE_HOURS: Optional[int]
-	EMAIL_TEMPLATES_DIR: Optional[str]
-	SERVER_HOST: Optional[str]
-	EMAILS_ENABLED: bool = False
-	
-	@validator("EMAILS_ENABLED", pre=True)
-	def get_emails_enabled(cls, v: bool, values: Dict[str, Any]) -> bool:
-		return bool(
-			values.get("SMTP_HOST")
-			and values.get("SMTP_PORT")
-			and values.get("EMAILS_FROM_EMAIL")
-		)
 	
 	""" Postgresql Settings """
 	POSTGRES_SERVER: str
@@ -58,11 +45,11 @@ class Settings(BaseSettings):
 			return v
 		else:
 			return PostgresDsn.build(
-				scheme="postgresql",
-				host=values.get("POSTGRES_SERVER"),
-				user=values.get("POSTGRES_USER"),
-				password=values.get("POSTGRES_PASSWORD"),
-				path=f"/{values.get('POSTGRES_DB') or ''}",
+					scheme="postgresql",
+					host=values.get("POSTGRES_SERVER"),
+					user=values.get("POSTGRES_USER"),
+					password=values.get("POSTGRES_PASSWORD"),
+					path=f"/{values.get('POSTGRES_DB') or ''}",
 			)
 	
 	""" Gunicorn Configs """
@@ -105,4 +92,4 @@ a = os.environ.get("DOCKER_MODE")
 if a or a == "True":
 	settings = Settings()
 else:
-	settings = Settings(_env_file=Path(__name__).resolve().parent.parent.parent / ".env")
+	settings = Settings(_env_file=Path(__name__).resolve().parent / "configurations/.env")
