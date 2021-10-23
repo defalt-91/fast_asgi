@@ -7,12 +7,12 @@ from fastapi import Response
 from fastapi.routing import APIRouter
 from fastapi.security import OAuth2PasswordRequestFormStrict
 from starlette import status
-
+from . import deps
 from services.db_service import get_db
 from services.security_service import create_access_token, get_current_user
 from core.base_settings import settings
 from apps.users import crud_user
-from ..users import models,schemas
+from ..users import models, schemas
 
 token_router = APIRouter()
 
@@ -57,12 +57,23 @@ async def authorization_server(
 		domain="api.myawesomesite.io",
 		path='/'
 	)
-	return {"response": "asd"}
+	return {
+		"access_token": access_token,
+		"token_type": "bearer",
+	}
 
 
-@token_router.post("/verify", response_model=schemas.User)
+@token_router.post("/verify", response_model=schemas.User, response_model_exclude={'is_superuser', 'is_active'})
 async def test_token(current_user: models.User = Depends(get_current_user)) -> Any:
-	"""
-	Test access token
-	"""
+	""" Test access token and get user details """
 	return current_user
+
+
+@token_router.post("/password-recovery/{email}", response_model=schemas.Msg)
+def recover_password(*, msg=Depends(deps.password_recover)) -> Any:
+	return msg
+
+
+@token_router.post("/reset-password/", response_model=schemas.Msg)
+def reset_password(*, msg=Depends(deps.reset_password)):
+	return msg

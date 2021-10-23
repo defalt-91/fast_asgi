@@ -1,36 +1,64 @@
-from typing import Any, Optional
+from typing import Any
 
-from apps.users.schemas import UserCreate
 from apps.users import models
+from core.base_settings import settings
 from services.db_service import get_db
 from sqlalchemy.orm.session import Session
-from fastapi import Depends, Body, HTTPException, status
+from fastapi import Depends, Body, HTTPException, status, Query
 from fastapi.encoders import jsonable_encoder
 from apps.users import crud_user
-from services.security_service import get_current_active_user
+from services.security_service import get_current_active_user, get_current_active_superuser
 from . import schemas
 from pydantic import EmailStr
+from services.email_service import send_new_account_email
+from .permissions import UserIsCurrentOrSudo
 
 
-async def create_user(user_in: UserCreate, db: Session = Depends(get_db)) -> models.User:
+async def user_list(
+	db: Session = Depends(get_db),
+	skip: int = 0,
+	limit: int = 100,
+	current_user: models.User = Depends(get_current_active_superuser)
+) -> Any:
+	""" Retrieve users. """
+	users = crud_user.user.get_multi(db=db, limit=limit, skip=skip)
+	return users
+
+
+async def create_user(user_in: schemas.UserCreate, db: Session = Depends(get_db)) -> models.User:
+	""" Create new user without the need to be logged in. """
+	if not settings.USERS_OPEN_REGISTRATION:
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail="Open user registration is forbidden on this server",
+		)
 	conflict_username = crud_user.user.get_user_by_username(db=db, username=user_in.username)
+	if conflict_username:
+		raise HTTPException(
+			status_code=status.HTTP_409_CONFLICT,
+			detail="The user with this username already exists in the system.",
+		)
 	if user_in.email:
 		conflict_email = crud_user.user.get_user_by_email(db=db, email=user_in.email)
 		if conflict_email:
 			raise HTTPException(
-				status_code=status.HTTP_400_BAD_REQUEST,
+				status_code=status.HTTP_409_CONFLICT,
 				detail="The user with this email already exists in the system.",
 			)
-	if conflict_username:
-		raise HTTPException(
-			status_code=status.HTTP_400_BAD_REQUEST,
-			detail="The user with this username already exists in the system.",
-		)
+	user_in.is_superuser = False
 	user_in_db = crud_user.user.create(db=db, obj_in=user_in)
+	if settings.EMAILS_ENABLED and user_in.email:
+		send_new_account_email(
+			email_to=user_in.email, username=user_in.email, password=user_in.password1
+		)
 	return user_in_db
 
 
-async def create_superuser(user_in: UserCreate, db: Session = Depends(get_db)):
+async def create_superuser(
+	user_in: schemas.UserCreate,
+	current_user=Depends(get_current_active_superuser),
+	db: Session = Depends(get_db)
+):
 	if user_in.email:
 		conflict_email = crud_user.user.get_user_by_email(db=db, email=user_in.email)
 		if conflict_email:
@@ -44,29 +72,15 @@ async def create_superuser(user_in: UserCreate, db: Session = Depends(get_db)):
 			status_code=status.HTTP_400_BAD_REQUEST,
 			detail="The user with this username already exists in the system.",
 		)
-	user = crud_user.user.create_superuser(obj_in=user_in, db=db)
+	user_in.is_superuser = True
+	user = crud_user.user.create(db=db, obj_in=user_in)
 	if not user:
 		raise HTTPException(detail='something is wrong', status_code=status.HTTP_400_BAD_REQUEST)
 	
 	return user
 
 
-class Permissions:
-	@staticmethod
-	def IsAuthor(
-		current_user: Optional[models.User] = None,
-		db_obj: Optional[Any] = None,
-		obj_author_username: Optional[str] = None
-	):
-		if db_obj:
-			print('current user')
-			return current_user.username == db_obj.author.username
-		elif obj_author_username:
-			print('username')
-			return obj_author_username == current_user.username
-
-
-async def update_user(
+async def update_user_me(
 	*,
 	db: Session = Depends(get_db),
 	password1: str = Body(None),
@@ -88,3 +102,60 @@ async def update_user(
 		user_in.email = email
 	user = crud_user.user.update(db, db_obj=current_user, obj_in=user_in)
 	return user
+
+
+def read_user_me(
+	db: Session = Depends(get_db),
+	current_user: models.User = Depends(get_current_active_user), ) -> Any:
+	""" Get current user. """
+	return current_user
+
+
+def read_user_by_id(
+	*,
+	db: Session = Depends(get_db),
+	current_user: models.User = Depends(get_current_active_user),
+	user_id: int = Query(...)
+) -> Any:
+	""" Get a specific user by id. """
+	
+	user = crud_user.user.get(db=db, id=user_id)
+	if not user:
+		raise HTTPException(detail='User doesnt exist !', status_code=status.HTTP_400_BAD_REQUEST)
+	UserIsCurrentOrSudo(current_user=current_user, user=user).has_permission()
+	return user
+
+
+def update_user_by_id(
+	*,
+	db: Session = Depends(get_db),
+	user_id: int,
+	user_in: schemas.UserUpdate,
+	current_user: models.User = Depends(get_current_active_superuser),
+) -> Any:
+	""" Update a user. """
+	user = crud_user.user.get(db, id=user_id)
+	if not user:
+		raise HTTPException(
+			status_code=404,
+			detail="The user with this username does not exist in the system",
+		)
+	user = crud_user.user.update(db=db, db_obj=user, obj_in=user_in)
+	return user
+
+
+def deactivate_user_by_id(
+	user_id: int,
+	user_in: schemas.UserUpdate,
+	db: Session = Depends(get_db),
+	current_user: models.User = Depends(get_current_active_superuser)
+) -> Any:
+	db_user = crud_user.user.get(db=db, id=user_id)
+	if not db_user:
+		raise HTTPException(
+			status_code=404,
+			detail="The user with this username does not exist in the system",
+		)
+	# obj_in = (** user.dict())
+	returned = crud_user.user.deactivate(db=db, db_obj=db_user, obj_in=user_in)
+	return returned

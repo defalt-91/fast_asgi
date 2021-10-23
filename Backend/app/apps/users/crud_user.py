@@ -1,14 +1,14 @@
 from typing import Any, Dict, Optional, Union
 
 from core.base_crud import CRUDBase
-from .schemas import UserCreate, UserUpdate
+from . import schemas
 from .models import User
 from sqlalchemy.orm.session import Session
 from services.password_service import get_password_hash, verify_password
 from pydantic import EmailStr
 
 
-class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
+class CRUDUser(CRUDBase[User, schemas.UserCreate, schemas.UserUpdate]):
 	@staticmethod
 	def get_user_by_email(db: Session, email: EmailStr) -> Optional[User]:
 		return db.query(User).filter(User.email == email).first()
@@ -41,29 +41,13 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 	def is_superuser(user_in: User) -> bool:
 		return user_in.is_superuser
 	
-	def create_superuser(self, db: Session, obj_in: UserCreate) -> User:
+	def create(self, db: Session, *, obj_in: schemas.UserCreate) -> User:
 		hashed_password = get_password_hash(obj_in.password1)
 		obj = User(
 			email=obj_in.email,
 			username=obj_in.username,
 			hashed_password=hashed_password,
 			full_name=obj_in.full_name,
-			is_superuser=True,
-			is_active=True
-		)
-		db.add(obj)
-		db.commit()
-		db.refresh(obj)
-		return obj
-	
-	def create(self, db: Session, *, obj_in: UserCreate) -> User:
-		hashed_password = get_password_hash(obj_in.password1)
-		obj = User(
-			email=obj_in.email,
-			username=obj_in.username,
-			hashed_password=hashed_password,
-			full_name=obj_in.full_name,
-			is_active=True
 		)
 		
 		db_obj = obj
@@ -73,7 +57,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 		db.refresh(db_obj)
 		return db_obj
 	
-	def update(self, db: Session, *, db_obj: User, obj_in: Union[UserUpdate, Dict[str, Any]]) -> User:
+	def update(self, db: Session, *, db_obj: User, obj_in: Union[schemas.UserUpdate, Dict[str, Any]]) -> User:
 		if isinstance(obj_in, dict):
 			updated_data = obj_in
 		else:
@@ -83,6 +67,10 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 			updated_data["hashed_password"] = hashed_pass
 			del updated_data["password"]
 		return super().update(db=db, db_obj=db_obj, obj_in=updated_data)
+	
+	def deactivate(self, db: Session, *, db_obj: User, obj_in: Union[schemas.UserUpdate, Dict[str, Any]]) -> User:
+		obj_in["is_active"] = False
+		return super().update(db=db, db_obj=db_obj, obj_in=obj_in)
 
 
 # def remove(self, db: Session, *, id: int) -> User:

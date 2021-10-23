@@ -10,8 +10,8 @@ services:
       - asgi_app
       - pgadmin
     volumes:
-      - ./Backend/app/configurations/nginx.conf:/etc/nginx/nginx.conf
-      - ./Frontend/app:/var/nginx/www
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ngFront/dist/ngFront:/var/nginx/www
     ports:
       - "80:80"
       - "443:443"

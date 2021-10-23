@@ -6,10 +6,10 @@ import re
 from pydantic import BaseModel, EmailStr, validator
 
 pattern2 = r'[A-Za-z0-9@#$%^&+=]{8,}'
-pattern = '^.*(?=.{8,})(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$'
+pattern = '^.*(?=.{7,})(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$'
 DEFAULT_PASSWORD_LIST_PATH = Path(__file__).resolve().parent / 'common-passwords.txt.gz'
 # reg = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{8,20}$"
-reg = "^(?=.*[a-z])(?=.*\d)[A-Za-z\d@$!#%*?&][A-Za-z\d@$!#%*?&]{8,20}$"
+reg = "^(?=.*[a-z])(?=.*\d)[A-Za-z\d@$!#%*?&][A-Za-z\d@$!#%*?&]{7,20}$"
 
 common_passwords: {}
 with gzip.open(DEFAULT_PASSWORD_LIST_PATH, 'rt', encoding='utf-8') as f:
@@ -21,7 +21,8 @@ class UserBase(BaseModel):
 	username: Optional[str] = None
 	email: Optional[EmailStr] = None
 	full_name: Optional[str] = None
-	is_active: Optional[bool] = False
+	is_active: Optional[bool] = True
+	is_superuser: Optional[bool] = False
 
 
 class Author(BaseModel):
@@ -43,7 +44,7 @@ class UserCreate(UserBase):
 	def password_validators(cls, v, values, **kwargs):
 		if 'password1' in values and v != values['password1']:
 			raise ValueError('passwords do not match')
-		if len(v) < 8:
+		if len(v) < 7:
 			raise ValueError('password need to be more than 8 characters')
 		if v.lower().strip() in common_passwords:
 			""" The password is rejected if it occurs in a provided list of passwords,"""
@@ -97,8 +98,6 @@ class User(UserInDBBase):
 	id: Optional[int] = None
 	username: Optional[str] = None
 	full_name: Optional[str] = None
-	# is_superuser: Optional[bool] = None
-	# is_active: Optional[bool] = None
 
 
 class UserProfile:
@@ -106,6 +105,10 @@ class UserProfile:
 	email: Optional[EmailStr] = None
 	full_name: Optional[str] = None
 	id: Optional[int] = None
+
+
+class UserDeactivate(UserInDBBase):
+	is_active: bool = False
 
 
 class Msg(BaseModel):

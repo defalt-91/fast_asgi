@@ -8,12 +8,12 @@ from .model import Post
 post_router = APIRouter()
 
 
-@post_router.get('/list', status_code=status.HTTP_200_OK, response_model=List[schema.PostList])
+@post_router.get('/', status_code=status.HTTP_200_OK, response_model=List[schema.PostList])
 async def post_list(*, posts=Depends(PostServices.post_list)):
 	return posts
 
 
-@post_router.post('/new', status_code=status.HTTP_201_CREATED, response_model=schema.PostDetail)
+@post_router.post('/', status_code=status.HTTP_201_CREATED, response_model=schema.PostDetail)
 async def post_create(*, post_created=Depends(PostServices.post_create)):
 	return post_created
 

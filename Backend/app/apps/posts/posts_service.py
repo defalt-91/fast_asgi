@@ -1,71 +1,66 @@
-from typing import Optional
+from typing import Any, Optional
 
 from apps.posts.crud_posts import crud_post
 from sqlalchemy.orm.session import Session
 from fastapi import status, HTTPException, Depends, Security, Query
-
+from apps.users import crud_user
 from apps.posts.model import Post
 from apps.posts.schema import PostUpdate, PostCreate
 from apps.users.models import User
 from services.db_service import get_db
 
-from apps.users.user_service import Permissions
+from ..users.permissions import IsAuthorOrSudo
 from services.security_service import get_current_active_user
 
 
 class PostServices:
 	@staticmethod
-	async def post_update(
-		*,
-		post_id: int,
-		update_data: PostUpdate,
+	async def post_list(
+		current_user=Depends(get_current_active_user),
 		db: Session = Depends(get_db),
-		current_user=Security(get_current_active_user, scopes=["posts"])
+		page: Optional[int] = Query(default=1, ge=1, title='page number', description=' integer type for page number'),
+		per_page: Optional[int] = Query(
+			default=5, title='items per page', description='integer type, numbers of each page posts'
+		)
 	):
-		db_obj = crud_post.get(db=db, id=post_id)
-		if not db_obj:
-			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='there no such a post')
-		is_author = Permissions.IsAuthor(db_obj=db_obj, current_user=current_user)
-		if not is_author:
-			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='you are not this post Author !')
-		try:
-			post = crud_post.update(db=db, db_obj=db_obj, obj_in=update_data)
-		except ValueError:
-			raise HTTPException(detail='the data is not valid', status_code=status.HTTP_400_BAD_REQUEST)
-		return post
-	
-	@staticmethod
-	async def post_delete(
-		*,
-		obj_id: int,
-		db: Session = Depends(get_db),
-		current_user: User = Security(get_current_active_user, scopes=['me', 'posts']),
-	):
-		# is_author = Permissions.IsAuthor(db_obj=db_obj, current_user=current_user)
-		# if not is_author:
-		# 	raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='you are not this post Author !')
-		obj = db.query(Post).get(obj_id)
-		if not obj:
-			raise HTTPException(detail='There is no post with this id', status_code=status.HTTP_400_BAD_REQUEST)
-		username = obj.author.username
-		is_author = Permissions.IsAuthor(current_user=current_user, obj_author_username=username)
-		if not is_author:
-			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='you are not this post Author !')
-		deleted = crud_post.remove(db=db, obj=obj)
-		return deleted
+		skip = page - 1
+		if crud_user.user.is_superuser(current_user):
+			posts = crud_post.get_multi(db=db, skip=skip * per_page, limit=per_page)
+		else:
+			posts = crud_post.get_multi_by_author(
+				db=db, author_id=current_user.id, skip=skip * per_page, limit=per_page
+			)
+		if not posts:
+			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='There is no post')
+		return posts
 	
 	@staticmethod
 	async def post_create(
 		*,
-		obj_in: PostCreate,
+		post_in: PostCreate,
 		db: Session = Depends(get_db),
 		current_user=Security(get_current_active_user, scopes=["posts"])
 	):
 		post_created = crud_post.create_with_author(
 			db=db, author_id=current_user.id,
-			obj_in=obj_in
+			obj_in=post_in
 		)
 		return post_created
+	
+	@staticmethod
+	async def post_update(
+		post_id: int,
+		item_in: PostUpdate,
+		db: Session = Depends(get_db),
+		current_user=Security(get_current_active_user, scopes=["posts"])
+	) -> Any:
+		""" Update an item. """
+		db_obj = crud_post.get(db=db, id=post_id)
+		if not db_obj:
+			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='there no such a post')
+		IsAuthorOrSudo(current_user=current_user, obj=db_obj).has_permission()
+		post = crud_post.update(db=db, db_obj=db_obj, obj_in=item_in)
+		return post
 	
 	@staticmethod
 	async def post_detail(
@@ -74,23 +69,24 @@ class PostServices:
 		db: Session = Depends(get_db),
 		current_user=Security(get_current_active_user, scopes=["posts"])
 	):
-		
-		post = crud_post.get(db=db, id=post_id)
-		if not post:
-			raise HTTPException(detail='There is no post with this id', status_code=status.HTTP_400_BAD_REQUEST)
-		return post
+		""" Update an item. """
+		db_post = crud_post.get(db=db, id=post_id)
+		if not db_post:
+			raise HTTPException(detail="Item not found", status_code=status.HTTP_404_NOT_FOUND)
+		IsAuthorOrSudo(current_user=current_user, obj=db_post).has_permission()
+		return db_post
 	
 	@staticmethod
-	async def post_list(
+	async def post_delete(
 		*,
+		obj_id: int,
 		db: Session = Depends(get_db),
-		paginated_page: Optional[int] = 1
+		current_user: User = Security(get_current_active_user, scopes=['me', 'posts']),
 	):
-		if paginated_page <= 1:
-			posts = crud_post.get_multi(db=db, limit=5)
-		else:
-			skip = paginated_page - 1
-			posts = crud_post.get_multi(db=db, skip=skip * 5, limit=5)
-		if not posts:
-			raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail='There is no post')
-		return posts
+		""" Delete an item. """
+		db_obj = db.query(Post).get(obj_id)
+		if not db_obj:
+			raise HTTPException(detail='There is no post with this id', status_code=status.HTTP_400_BAD_REQUEST)
+		IsAuthorOrSudo(current_user=current_user, obj=db_obj).has_permission()
+		deleted = crud_post.remove(db=db, id=obj_id)
+		return deleted
