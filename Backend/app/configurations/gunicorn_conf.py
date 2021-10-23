@@ -98,6 +98,7 @@ worker_tmp_dir = str(Path(__name__).resolve().parent / "logs/guni/")
 
 pidfile = str(Path(__name__).resolve().parent / "logs/guni/pid.txt")  # A filename to use for the PID file.
 tmp_upload_dir = None
+# secure_scheme_headers = {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
 secure_scheme_headers = {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
 # forwarded_allow_ips               = ['127.0.0.1']
 # paste = None

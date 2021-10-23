@@ -5,7 +5,7 @@ from sqlalchemy.orm.session import Session
 from fastapi import Depends, HTTPException
 from fastapi import Response
 from fastapi.routing import APIRouter
-from fastapi.security import OAuth2PasswordRequestFormStrict
+from fastapi.security import OAuth2PasswordRequestFormStrict, OAuth2PasswordRequestForm
 from starlette import status
 from . import deps
 from services.db_service import get_db
@@ -20,7 +20,7 @@ token_router = APIRouter()
 @token_router.post("/token")
 async def authorization_server(
 	response: Response,
-	form_data: OAuth2PasswordRequestFormStrict = Depends(),
+	form_data: OAuth2PasswordRequestForm = Depends(),
 	db: Session = Depends(get_db),
 ):
 	user = crud_user.user.authenticate_by_username(
@@ -43,6 +43,8 @@ async def authorization_server(
 		)
 	elif not crud_user.user.is_active(user):
 		raise HTTPException(status_code=400, detail="Inactive user")
+	form_data.scopes.append('me')
+	# form_data.scopes.append('posts')
 	access_token = create_access_token(
 		data={"sub": user.username, "scopes": form_data.scopes},
 		expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRATION_MINUTES),
@@ -51,10 +53,10 @@ async def authorization_server(
 		key='authorization',
 		value=f"bearer {access_token}",
 		httponly=True,
-		samesite="strict",
+		samesite="strict",  # sending just to the site that wrote the cookie
 		secure=False,
 		expires=settings.ACCESS_TOKEN_EXPIRATION_MINUTES * 60,
-		domain="api.myawesomesite.io",
+		domain="myawesomesite.io",  # subdomains are ignored , like api.myawesomesite.io ... just the domain in needed
 		path='/'
 	)
 	return {

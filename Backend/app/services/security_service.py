@@ -49,9 +49,9 @@ Jwt_Options = {
 class OAuth2PasswordBearerCookieMode(OAuth2PasswordBearer):
 	
 	async def __call__(self, request: Request) -> Optional[str]:
-		authorization: str = request.cookies.get('authorization')
-		scheme, param = get_authorization_scheme_param(authorization)
-		if not authorization or scheme.lower() != "bearer":
+		token: str = request.cookies.get('authorization')
+		scheme, param = get_authorization_scheme_param(token)
+		if not token or scheme.lower() != "bearer":
 			if self.auto_error:
 				raise HTTPException(
 					status_code=status.HTTP_401_UNAUTHORIZED,
@@ -78,8 +78,8 @@ def create_access_token(
 	expires_delta: Optional[timedelta] = None,
 	created_at: Optional[bool] = True,
 	issuer: Optional[str] = "my corporation",
-	audience: List[str] = "http://myawesomesite.io",
-	not_berfore: Optional[int] = 0
+	audience: List[str] = ["http://myawesomesite.io"],
+	# not_before: Optional[int] = 1
 ):
 	to_encode = data.copy()
 	if expires_delta:
@@ -91,10 +91,9 @@ def create_access_token(
 		to_encode.update({'jit': uuid.uuid4().hex})
 	if created_at:
 		to_encode.update({"iat": datetime.utcnow()})
-	if not_berfore != 0:
-		to_encode.update({"nbf": datetime.utcnow() + timedelta(minutes=not_berfore)})
-	else:
-		to_encode.update({"nbf": datetime.utcnow() + timedelta(seconds=1)})
+	# if not_before:
+	# 	to_encode.update({"nbf": datetime.utcnow() + timedelta(seconds=not_before)})
+	
 	if issuer:
 		to_encode.update({"iss": issuer})
 	if audience:
@@ -110,7 +109,7 @@ def create_access_token(
 async def get_current_user(
 	security_scopes: SecurityScopes,
 	# token: str = Depends(oauth2_scheme),
-	authorization: str = Depends(oauth2_scheme),
+	token: str = Depends(oauth2_scheme),
 	db: Session = Depends(get_db)
 ) -> User:
 	if security_scopes.scopes:
@@ -132,7 +131,7 @@ async def get_current_user(
 		)
 	
 	try:
-		headers = jwt.get_unverified_header(authorization)
+		headers = jwt.get_unverified_header(token)
 		if headers.get('alg') != 'HS256':
 			raise HTTPException(
 				status_code=status.HTTP_403_FORBIDDEN,
@@ -140,7 +139,7 @@ async def get_current_user(
 				headers={"WWW-Authenticate": "Bearer"}
 			)
 		payload = jwt.decode(
-			authorization, settings.SECRET_KEY,
+			token, settings.SECRET_KEY,
 			algorithms=[settings.ALGORITHM],
 			audience='http://myawesomesite.io',
 			options=Jwt_Options,

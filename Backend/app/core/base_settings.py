@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import (BaseSettings, EmailStr, PostgresDsn, validator, )
 
@@ -12,7 +12,9 @@ class Settings(BaseSettings):
 	""" APPLICATION SETTINGS """
 	""" Server Settings"""
 	API_PREFIX: Optional[str]
+	PROJECT_HOST_OR_DNS: Optional[str]
 	USERS_OPEN_REGISTRATION: Optional[bool] = True
+	AUTH_MODE = 'cookie_mode'  # 'header_mode'
 	
 	""" JWT SETTINGS"""
 	SECRET_KEY: Optional[str]
@@ -87,7 +89,7 @@ class Settings(BaseSettings):
 	def get_arman(cls, v: Optional[str], values: Dict[str, Any]):
 		return v
 	
-	ALLOWED_HOSTS: List[str]
+	ALLOWED_HOSTS: Optional[List[str]]
 
 
 # @validator("BACKEND_CORS_ORIGINS", pre=True)

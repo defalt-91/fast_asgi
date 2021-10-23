@@ -15,7 +15,7 @@ api_router.include_router(
 
 api_router.include_router(
 	router=accounts,
-	prefix="/accounts",
+	prefix="/users",
 	tags=["Authentication Server"],
 	include_in_schema=True,
 )
