@@ -169,7 +169,9 @@ async def get_current_user(
 	if user is None:
 		raise credentials_exception
 	for scope in security_scopes.scopes:
-		if scope not in token_data.scopes:
+		if 'admin' in token_data.scopes:
+			return user
+		elif scope not in token_data.scopes:
 			raise HTTPException(
 				status_code=status.HTTP_401_UNAUTHORIZED,
 				detail="Not enough permissions",
