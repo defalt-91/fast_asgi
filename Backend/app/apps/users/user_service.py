@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Tuple
 
 from apps.users import models
 from core.base_settings import settings
@@ -7,20 +7,22 @@ from sqlalchemy.orm.session import Session
 from fastapi import Depends, Body, HTTPException, status, Query
 from fastapi.encoders import jsonable_encoder
 from apps.users import crud_user
+from services.paginator import Pagination
 from services.security_service import get_current_active_user, get_current_active_superuser
 from . import schemas
 from pydantic import EmailStr
 from services.email_service import send_new_account_email
 from .permissions import UserIsCurrentOrSudo
+from ..scopes.models import Scope
 
 
 async def user_list(
 	db: Session = Depends(get_db),
-	skip: int = 0,
-	limit: int = 100,
+	pagination: Tuple[int, int] = Depends(Pagination.page_size),
 	current_user: models.User = Depends(get_current_active_superuser)
 ) -> Any:
 	""" Retrieve users. """
+	skip, limit = pagination
 	users = crud_user.user.get_multi(db=db, limit=limit, skip=skip)
 	return users
 
@@ -46,11 +48,20 @@ async def create_user(user_in: schemas.UserCreate, db: Session = Depends(get_db)
 				detail="The user with this email already exists in the system.",
 			)
 	user_in.is_superuser = False
+	me = db.query(Scope).filter(Scope.id == 1).first()
+	posts = db.query(Scope).filter(Scope.id == 2).first()
+	
+	user_in.is_superuser = True
 	user_in_db = crud_user.user.create(db=db, obj_in=user_in)
 	if settings.EMAILS_ENABLED and user_in.email:
 		send_new_account_email(
 			email_to=user_in.email, username=user_in.email, password=user_in.password1
 		)
+	user_in_db.scopes.append(me)
+	user_in_db.scopes.append(posts)
+	db.add(user_in_db)
+	db.commit()
+	db.refresh(user_in_db)
 	return user_in_db
 
 
@@ -73,10 +84,15 @@ async def create_superuser(
 			detail="The user with this username already exists in the system.",
 		)
 	user_in.is_superuser = True
+	
 	user = crud_user.user.create(db=db, obj_in=user_in)
 	if not user:
 		raise HTTPException(detail='something is wrong', status_code=status.HTTP_400_BAD_REQUEST)
-	
+	admin = db.query(Scope).filter(Scope.id == 3).first()
+	user.scopes.append(admin)
+	db.add(user)
+	db.commit()
+	db.refresh(user)
 	return user
 
 

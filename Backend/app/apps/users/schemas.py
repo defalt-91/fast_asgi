@@ -1,9 +1,11 @@
 import gzip
 from pathlib import Path
-from typing import Optional
+from typing import Any, List, Optional, Sequence
 import re
 
 from pydantic import BaseModel, EmailStr, validator
+
+from apps.scopes.models import Scope
 
 pattern2 = r'[A-Za-z0-9@#$%^&+=]{8,}'
 pattern = '^.*(?=.{7,})(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$'
@@ -82,6 +84,11 @@ class UserUpdate(UserBase):
 
 class UserInDBBase(UserBase):
 	id: Optional[int] = None
+	scopes: List[Any]
+	
+	@validator('scopes')
+	def list_of_scopes(cls, v):
+		return [i.code for i in v]
 	
 	class Config:
 		orm_mode = True

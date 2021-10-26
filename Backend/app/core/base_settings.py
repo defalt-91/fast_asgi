@@ -1,25 +1,54 @@
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Set
 
-from pydantic import (BaseSettings, EmailStr, PostgresDsn, validator, )
+from pydantic import (BaseSettings, EmailStr, PostgresDsn, validator)
 
 
 class Settings(BaseSettings):
-	DEBUG: bool = False
+	# class Config:
+	# 	env_file = ".env"
 	# DOCKER_MODE = Optional[bool] = True
 	
 	""" APPLICATION SETTINGS """
+	DEBUG: bool
 	""" Server Settings"""
-	API_PREFIX: Optional[str]
+	API_PREFIX: Optional[str] = None
 	PROJECT_HOST_OR_DNS: Optional[str]
 	USERS_OPEN_REGISTRATION: Optional[bool] = True
-	AUTH_MODE = 'cookie_mode'  # 'header_mode'
+	MAXIMUM_ITEMS_PER_PAGE: Optional[int] = 50
+	
+	"""     CORS_SETTINGS    """
+	ALLOWED_HEADERS: List[str] = []
+	ALLOWED_METHODS: List[str] = []
+	ALLOWED_CREDENTIALS: bool = False
+	ALLOWED_ORIGINS: Optional[List[str]] = []
+	DATABASE_URL: Optional[str] = None
+	ALLOWED_HOSTS: Optional[List[str]] = ["*"]
+	
+	@validator("DATABASE_URL", pre=True)
+	def get_arman(cls, v: Optional[str], values: Dict[str, Any]):
+		return v
+	
+	""" Cross Site Request Forgery SETTINGS"""
+	CSRF_TOKEN_HEADER_NAME: str
+	CSRF_TOKEN_COOKIE_NAME: str
+	CSRF_TOKEN_COOKIE_PATH: str
+	FRONTEND_DOMAIN: str
+	CSRF_TOKEN_SECRET: str
+	TOKEN_SENSITIVE_COOKIES: Set[str]
+	
+	@validator('TOKEN_SENSITIVE_COOKIES', pre=True)
+	def make_set(cls, v):
+		name = set()
+		for i in v:
+			name.add(i)
+		return name
 	
 	""" JWT SETTINGS"""
-	SECRET_KEY: Optional[str]
-	ACCESS_TOKEN_EXPIRATION_MINUTES: Optional[int]
-	ALGORITHM: Optional[str]
+	SECRET_KEY: str
+	ACCESS_TOKEN_EXPIRATION_MINUTES: int
+	ALGORITHM: str
 	
 	""" Email Settings"""
 	SMTP_TLS: Optional[bool]
@@ -78,27 +107,6 @@ class Settings(BaseSettings):
 	GRACEFUL_TIMEOUT: Optional[int]
 	TIMEOUT: Optional[int]
 	KEEP_ALIVE: Optional[int]
-	"""     CORS_CONFIGS    """
-	ALLOWED_HEADERS: List[str] = []
-	ALLOWED_METHODS: List[str] = []
-	ALLOWED_CREDENTIALS: bool = False
-	ALLOWED_ORIGINS: Optional[List[str]] = []
-	DATABASE_URL: Optional[str] = None
-	
-	@validator("DATABASE_URL", pre=True)
-	def get_arman(cls, v: Optional[str], values: Dict[str, Any]):
-		return v
-	
-	ALLOWED_HOSTS: Optional[List[str]]
-
-
-# @validator("BACKEND_CORS_ORIGINS", pre=True)
-# def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
-# 	if isinstance(v, str) and not v.startswith("["):
-# 		return [i.strip() for i in v.split(",")]
-# 	elif isinstance(v, (list, str)):
-# 		return v
-# 	raise ValueError(v)
 
 
 a = os.environ.get("DOCKER_MODE")

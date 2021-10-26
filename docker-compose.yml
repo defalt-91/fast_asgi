@@ -21,7 +21,7 @@ services:
   #    restart: on-failure
 
   asgi_app:
-    image: asgi_app_image
+    image: fastasgi
     build:
       dockerfile: backend.dockerfile
       context: Backend/app
@@ -55,8 +55,8 @@ services:
     depends_on:
       - databases
     env_file: .pgadmin.env
-#    volumes:
-#      - pg_admin_data:/var/lib/pgadmin
+    volumes:
+      - pg_admin_data:/var/lib/pgadmin
 
 
 

@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 from apps.posts.crud_posts import crud_post
 from sqlalchemy.orm.session import Session
@@ -8,28 +8,26 @@ from apps.posts.model import Post
 from apps.posts.schema import PostUpdate, PostCreate
 from apps.users.models import User
 from services.db_service import get_db
-
+from services.paginator import Pagination
 from ..users.permissions import IsAuthorOrSudo
 from services.security_service import get_current_active_user
+from core.base_settings import settings
 
 
 class PostServices:
+	pagination = Pagination(max_limit=settings.MAXIMUM_ITEMS_PER_PAGE)
+	
 	@staticmethod
 	async def post_list(
-		current_user=Depends(get_current_active_user),
+		current_user=Security(get_current_active_user, scopes=["posts"]),
 		db: Session = Depends(get_db),
-		page: Optional[int] = Query(default=1, ge=1, title='page number', description=' integer type for page number'),
-		per_page: Optional[int] = Query(
-			default=5, title='items per page', description='integer type, numbers of each page posts'
-		)
+		paginator: Tuple[int, int] = Depends(pagination)
 	):
-		skip = page - 1
+		skip, limit = paginator
 		if crud_user.user.is_superuser(current_user):
-			posts = crud_post.get_multi(db=db, skip=skip * per_page, limit=per_page)
+			posts = crud_post.get_multi(db=db, skip=skip, limit=limit)
 		else:
-			posts = crud_post.get_multi_by_author(
-				db=db, author_id=current_user.id, skip=skip * per_page, limit=per_page
-			)
+			posts = crud_post.get_multi_by_author(db=db, author_id=current_user.id, skip=skip, limit=limit)
 		if not posts:
 			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='There is no post')
 		return posts
@@ -81,7 +79,7 @@ class PostServices:
 		*,
 		obj_id: int,
 		db: Session = Depends(get_db),
-		current_user: User = Security(get_current_active_user, scopes=['me', 'posts']),
+		current_user: User = Security(get_current_active_user, scopes=['posts']),
 	):
 		""" Delete an item. """
 		db_obj = db.query(Post).get(obj_id)

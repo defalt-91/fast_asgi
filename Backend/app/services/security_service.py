@@ -19,6 +19,8 @@ from core.base_settings import settings
 from apps.users.crud_user import user as crud_user
 from sqlalchemy.orm.session import Session
 from fastapi.security.utils import get_authorization_scheme_param
+from slowapi.util import get_ipaddr, get_remote_address
+from slowapi import Limiter
 
 Jwt_Options = {
 	'verify_signature': True,
@@ -43,6 +45,14 @@ Jwt_Options = {
 
 ''' load config for passlib hashing from .ini file '''
 
+# limiter = Limiter(key_func=get_ipaddr, default_limits=["3/minute"])
+limiter = Limiter(
+	key_func=get_remote_address,
+	headers_enabled=True,
+	default_limits=["20/minute"],
+	# storage_uri="redis://0.0.0.0:6379"
+)
+
 
 # pwd_context_making_changes = pwd_context.load_path(path=Path(__name__).resolve().parent / "services/CryptContext.ini")
 
@@ -66,9 +76,6 @@ class OAuth2PasswordBearerCookieMode(OAuth2PasswordBearer):
 oauth2_scheme = OAuth2PasswordBearerCookieMode(
 	tokenUrl="Oauth/token",
 	scopes=all_scopes,
-	# authorizationUrl='Oauth/authorize',
-	
-	# scheme_name='pass'
 )
 
 
@@ -108,7 +115,6 @@ def create_access_token(
 
 async def get_current_user(
 	security_scopes: SecurityScopes,
-	# token: str = Depends(oauth2_scheme),
 	token: str = Depends(oauth2_scheme),
 	db: Session = Depends(get_db)
 ) -> User:
@@ -187,10 +193,6 @@ async def get_current_active_user(current_user: User = Security(get_current_user
 
 
 def get_current_active_superuser(
-	current_user: User = Depends(get_current_user),
+	current_user: User = Security(get_current_active_user, scopes=['admin']),
 ) -> User:
-	# if not crud.user.is_superuser(current_user):
-	# 	raise HTTPException(
-	# 			status_code=400, detail="The user doesn't have enough privileges"
-	# 	)
 	return current_user
