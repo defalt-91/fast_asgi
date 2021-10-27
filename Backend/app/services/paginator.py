@@ -1,6 +1,8 @@
 from fastapi import Query
 from typing import Tuple
 
+from core.base_settings import settings
+
 
 async def pagination(
 	page: int = Query(
@@ -19,7 +21,7 @@ async def pagination(
 
 
 class Pagination:
-	def __init__(self, max_limit: int = 100):
+	def __init__(self, max_limit: int = 50):
 		self.max_limit = max_limit
 	
 	def __call__(
@@ -51,3 +53,6 @@ class Pagination:
 		skip = (page - 1) * size
 		limit = min(self.max_limit, size)
 		return skip, limit
+
+
+paginator = Pagination(max_limit=settings.MAXIMUM_ITEMS_PER_PAGE)

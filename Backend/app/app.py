@@ -37,17 +37,17 @@ app.add_middleware(
 	trustedhost.TrustedHostMiddleware,
 	allowed_hosts=settings.ALLOWED_HOSTS
 )
-
-app.add_middleware(
-	CSRFMiddleware,
-	secret=settings.CSRF_TOKEN_SECRET,
-	cookie_name=settings.CSRF_TOKEN_COOKIE_NAME,
-	cookie_path=settings.CSRF_TOKEN_COOKIE_PATH,
-	# for triggering the csrf check when detecting this cookie in safe methods
-	sensitive_cookies=settings.TOKEN_SENSITIVE_COOKIES,
-	cookie_domain=settings.FRONTEND_DOMAIN,
-	header_name=settings.CSRF_TOKEN_HEADER_NAME,
-)
+#
+# app.add_middleware(
+# 	CSRFMiddleware,
+# 	secret=settings.CSRF_TOKEN_SECRET,
+# 	cookie_name=settings.CSRF_TOKEN_COOKIE_NAME,
+# 	cookie_path=settings.CSRF_TOKEN_COOKIE_PATH,
+# 	# for triggering the csrf check when detecting this cookie in safe methods
+# 	sensitive_cookies=settings.TOKEN_SENSITIVE_COOKIES,
+# 	cookie_domain=settings.FRONTEND_DOMAIN,
+# 	header_name=settings.CSRF_TOKEN_HEADER_NAME,
+# )
 app.add_middleware(gzip.GZipMiddleware, minimum_size=1000)
 app.add_middleware(SlowAPIMiddleware)
 

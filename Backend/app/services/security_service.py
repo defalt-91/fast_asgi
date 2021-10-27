@@ -48,7 +48,7 @@ Jwt_Options = {
 # limiter = Limiter(key_func=get_ipaddr, default_limits=["3/minute"])
 limiter = Limiter(
 	key_func=get_remote_address,
-	headers_enabled=True,
+	# headers_enabled=True,
 	default_limits=["20/minute"],
 	# storage_uri="redis://0.0.0.0:6379"
 )

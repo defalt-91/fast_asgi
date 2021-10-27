@@ -8,22 +8,19 @@ from apps.posts.model import Post
 from apps.posts.schema import PostUpdate, PostCreate
 from apps.users.models import User
 from services.db_service import get_db
-from services.paginator import Pagination
+from services.paginator import paginator
 from ..users.permissions import IsAuthorOrSudo
 from services.security_service import get_current_active_user
-from core.base_settings import settings
 
 
 class PostServices:
-	pagination = Pagination(max_limit=settings.MAXIMUM_ITEMS_PER_PAGE)
-	
 	@staticmethod
 	async def post_list(
 		current_user=Security(get_current_active_user, scopes=["posts"]),
 		db: Session = Depends(get_db),
-		paginator: Tuple[int, int] = Depends(pagination)
+		pagination: Tuple[int, int] = Depends(paginator)
 	):
-		skip, limit = paginator
+		skip, limit = pagination
 		if crud_user.user.is_superuser(current_user):
 			posts = crud_post.get_multi(db=db, skip=skip, limit=limit)
 		else:

@@ -84,7 +84,9 @@ async def authorization_server(
 
 @token_router.post("/verify", response_model=schemas.User, response_model_exclude={'is_superuser', 'is_active'})
 @limiter.limit("5/minutes")
-async def test_token(request: Request, current_user: models.User = Depends(get_current_user)) -> Any:
+async def test_token(
+	request: Request, current_user: models.User = Depends(get_current_user)
+) -> Any:
 	""" Test access token and get user details """
 	return current_user
 

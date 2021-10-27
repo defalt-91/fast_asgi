@@ -7,7 +7,7 @@ from sqlalchemy.orm.session import Session
 from fastapi import Depends, Body, HTTPException, status, Query
 from fastapi.encoders import jsonable_encoder
 from apps.users import crud_user
-from services.paginator import Pagination
+from services.paginator import paginator
 from services.security_service import get_current_active_user, get_current_active_superuser
 from . import schemas
 from pydantic import EmailStr
@@ -18,7 +18,7 @@ from ..scopes.models import Scope
 
 async def user_list(
 	db: Session = Depends(get_db),
-	pagination: Tuple[int, int] = Depends(Pagination.page_size),
+	pagination: Tuple[int, int] = Depends(paginator),
 	current_user: models.User = Depends(get_current_active_superuser)
 ) -> Any:
 	""" Retrieve users. """
