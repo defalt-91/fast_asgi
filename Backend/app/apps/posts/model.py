@@ -1,10 +1,11 @@
-from core.base_crud import Base
-from sqlalchemy import Column, String, Integer, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, String
+from core.database.registry import NameAndIDMixin, mapper_registry, RefAuthorMixin
 
 
-class Post(Base):
+@mapper_registry.mapped
+class Post(NameAndIDMixin, RefAuthorMixin):
 	title = Column(String, nullable=True, index=True)
 	body = Column(String, nullable=True, index=True)
-	author_id = Column(Integer, ForeignKey('user.id'))
-	author = relationship('User', back_populates="posts")
+	
+	def __repr__(self):
+		return f"{self.title}"

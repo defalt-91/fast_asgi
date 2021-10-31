@@ -1,34 +1,38 @@
-from typing import Optional
-from pydantic import BaseModel
+from enum import Enum
+from typing import Any, List, Optional, Sequence
+from pydantic import BaseModel, validator
+
+from apps.scopes.models import ScopesEnum
 
 
 class ScopeBase(BaseModel):
-	code: Optional[str] = None
-	description: Optional[str] = None
+    code: Optional[str] = None
+    description: Optional[str] = None
+
+    class Config:
+        orm_mode = True
 
 
 class ScopeIn(ScopeBase):
-	code: str
-	description: str
+    code: str
+    description: str
 
 
 class ScopeOut(ScopeBase):
-	id: int
-	code: str
-	description: str
+    id: int
+    code: str
+    description: str
 
 
-class UserScopesBase(BaseModel):
-	user_id: Optional[int] = None
-	scope_id: Optional[int] = None
+class ScopeUser(BaseModel):
+    username: str
+    id: int
+    email: Any
+
+    class Config:
+        orm_mode = True
 
 
-class UserScopesIn(UserScopesBase):
-	user_id: int
-	scope_id: int
+class ScopeOutWithUsers(ScopeOut):
+    users: List[ScopeUser]
 
-
-class UserScopesOut(UserScopesBase):
-	id: int
-	user_id: int
-	scope_id: int

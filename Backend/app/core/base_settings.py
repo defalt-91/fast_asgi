@@ -94,6 +94,21 @@ class Settings(BaseSettings):
 				path=f"/{values.get('POSTGRES_DB') or ''}",
 			)
 	
+	SQLALCHEMY_ASYNC_DATABASE_URI: Optional[str] = None
+	
+	@validator('SQLALCHEMY_ASYNC_DATABASE_URI', pre=True)
+	def async_assemble_db_connection(cls, v: Optional[str], values: Dict[str, any]) -> any:
+		if isinstance(v, str):
+			return v
+		else:
+			return PostgresDsn.build(
+				scheme="postgresql+asyncpg",
+				host=values.get("POSTGRES_SERVER"),
+				user=values.get("POSTGRES_USER"),
+				password=values.get("POSTGRES_PASSWORD"),
+				path=f"/{values.get('POSTGRES_DB') or ''}",
+			)
+	
 	""" Gunicorn Configs """
 	WORKERS_PER_CORE: Optional[int or bool] = False
 	MAX_WORKERS: Optional[int] = 0
