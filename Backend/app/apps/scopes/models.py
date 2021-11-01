@@ -34,12 +34,13 @@ class UserScopes:
 @mapper_registry.mapped
 class Scope(NameAndIDMixin):
     code = Column(String(50), nullable=False, unique=True)
-    description = Column(Text)
+    description = Column(String(255))
     users = relationship(
         "User",
         secondary=UserScopes.__tablename__,
         back_populates="scopes",
         passive_deletes=True,
+        cascade="all, delete",
     )
 
     def __str__(self):

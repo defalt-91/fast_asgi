@@ -1,7 +1,7 @@
-FROM fastasgi_python_ready
+FROM fastasgi_python_ready:latest
 
-COPY dependencies.txt .
-RUN pip install -r dependencies.txt
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 WORKDIR /app/
 
 #ENTRYPOINT ["gunicorn","-c","python:gunicorn_conf"]

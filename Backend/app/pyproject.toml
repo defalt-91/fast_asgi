@@ -24,6 +24,11 @@ aiopg = "^1.3.2"
 alembic = "^1.7.4"
 Jinja2 = "^3.0.2"
 sqlalchemy2-stubs = "^0.0.2-alpha.19"
+Authlib = "^0.15.5"
+timing-asgi = "^0.2.1"
+starlette-prometheus = "^0.8.0"
+httpx = "^0.20.0"
+Pillow = "^8.4.0"
 
 [tool.poetry.dev-dependencies]
 [build-system]

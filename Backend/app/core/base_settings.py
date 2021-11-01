@@ -1,8 +1,9 @@
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from pydantic import (BaseSettings, EmailStr, PostgresDsn, validator)
+from pydantic import BaseSettings, EmailStr, PostgresDsn, validator
 
 
 class Settings(BaseSettings):
@@ -10,7 +11,17 @@ class Settings(BaseSettings):
 	# 	env_file = ".env"
 	# DOCKER_MODE = Optional[bool] = True
 	
-	""" APPLICATION SETTINGS """
+	"""APPLICATION SETTINGS"""
+	BASE_DIR: Path
+	BACKEND_DIR: Path = BASE_DIR.parent
+	
+	@validator('BASE_DIR')
+	def base_dir_path(cls, v):
+		if Path(__file__).resolve().parent.parent.parent.exists():
+			base_dir = Path(__file__).resolve().parent.parent
+			staticfile = base_dir.mkdir()
+	
+	STATICFILES_DIR: Path
 	DEBUG: bool
 	""" Server Settings"""
 	API_PREFIX: Optional[str] = None
@@ -38,7 +49,7 @@ class Settings(BaseSettings):
 	CSRF_TOKEN_SECRET: str
 	TOKEN_SENSITIVE_COOKIES: Set[str]
 	
-	@validator('TOKEN_SENSITIVE_COOKIES', pre=True)
+	@validator("TOKEN_SENSITIVE_COOKIES", pre=True)
 	def make_set(cls, v):
 		name = set()
 		for i in v:
@@ -81,7 +92,7 @@ class Settings(BaseSettings):
 	DATABASE_USER: Optional[str]
 	DATABASE_PASSWORD: Optional[str]
 	
-	@validator('SQLALCHEMY_DATABASE_URI', pre=True)
+	@validator("SQLALCHEMY_DATABASE_URI", pre=True)
 	def assemble_db_connection(cls, v: Optional[str], values: Dict[str, any]) -> any:
 		if isinstance(v, str):
 			return v
@@ -96,8 +107,10 @@ class Settings(BaseSettings):
 	
 	SQLALCHEMY_ASYNC_DATABASE_URI: Optional[str] = None
 	
-	@validator('SQLALCHEMY_ASYNC_DATABASE_URI', pre=True)
-	def async_assemble_db_connection(cls, v: Optional[str], values: Dict[str, any]) -> any:
+	@validator("SQLALCHEMY_ASYNC_DATABASE_URI", pre=True)
+	def async_assemble_db_connection(
+		cls, v: Optional[str], values: Dict[str, any]
+	) -> any:
 		if isinstance(v, str):
 			return v
 		else:
@@ -128,4 +141,11 @@ a = os.environ.get("DOCKER_MODE")
 if a or a == "True":
 	settings = Settings()
 else:
-	settings = Settings(_env_file=Path(__name__).resolve().parent / "configurations/.env")
+	settings = Settings(
+		_env_file=Path(__name__).resolve().parent / "configurations/.env"
+	)
+
+
+@lru_cache
+def get_settings():
+	return Settings()

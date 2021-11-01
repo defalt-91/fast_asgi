@@ -58,7 +58,7 @@ class Pagination:
 paginator = Pagination(max_limit=settings.MAXIMUM_ITEMS_PER_PAGE)
 
 
-class Pagination:
+class DjangoPagination:
 	"""Internal helper class returned by :meth:`BaseQuery.paginate`.  You
 	can also construct it from any other SQLAlchemy query object if you are
 	working with other libraries.  Additionally it is possible to pass `None`

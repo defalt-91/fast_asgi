@@ -1,11 +1,14 @@
 from datetime import timedelta
-from typing import Any, List
+from typing import Any, List, Optional
 from sqlalchemy.orm.session import Session
-from fastapi import Depends, Request, Response, APIRouter,HTTPException, Query, Body
+from fastapi import Depends, Request, Response, APIRouter, HTTPException, Query, Body
 from fastapi.security import OAuth2PasswordRequestFormStrict, OAuth2PasswordRequestForm
 
 from services.security_service import create_access_token, get_current_user, limiter
 from core.base_settings import settings
+from .TokenDAL import token_dal
+from .models import Token, TokenTypes
+from .schemas import TokenCreate
 from ..scopes.models import Scope
 from ..users import models, schemas
 from ..users.UserDAL import user_dal
@@ -114,10 +117,21 @@ async def authorization_server(
     # 	if scope.lower() == 'posts' and user.is_active:
     # 		allowed_scopes.append('posts')
 
+    token = Token()
+    token.token_type = TokenTypes.ACCESS_TOKEN
+    token.user_id = user.id
+    session.add(token)
+    session.commit()
+    session.refresh(token)
     access_token = create_access_token(
+        using_jti=True,
+        jti=token.id,
         data={"sub": user.username, "scopes": allowed_scopes},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRATION_MINUTES),
     )
+    token.jwt = access_token
+    session.add(token)
+    session.commit()
     response.set_cookie(
         key="authorization",
         value=f"bearer {access_token}",
@@ -128,7 +142,18 @@ async def authorization_server(
         # domain="myawesomesite.io",  # subdomains are ignored , like api.myawesomesite.io ... just the domain in needed
         path="/",
     )
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-    }
+
+    return token
+
+
+@token_router.get("/{user_id}")
+async def user_tokens(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: models.User = Depends(get_current_user),
+):
+
+    token_list = token_dal.get_access_token(session=session, user_id=user_id)
+    if not token_list:
+        raise errors.user_have_not_active_token
+    return token_list

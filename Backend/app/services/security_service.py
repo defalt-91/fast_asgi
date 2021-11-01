@@ -4,8 +4,9 @@ from typing import Any, List, Optional
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import (
     OAuth2PasswordBearer,
-    SecurityScopes,
+    SecurityScopes
 )
+
 from jose.exceptions import JWTClaimsError
 from pydantic import ValidationError
 
@@ -22,6 +23,8 @@ from fastapi.security.utils import get_authorization_scheme_param
 from slowapi.util import get_remote_address
 from slowapi import Limiter
 from apps.users.UserDAL import user_dal
+import uuid
+
 Jwt_Options = {
     "verify_signature": True,
     "verify_aud": True,
@@ -80,8 +83,9 @@ oauth2_scheme = OAuth2PasswordBearerCookieMode(
 
 
 def create_access_token(
+    jti: int,
     data: dict,
-    using_jit=True,
+    using_jti=True,
     expires_delta: Optional[timedelta] = None,
     created_at: Optional[bool] = True,
     issuer: Optional[str] = "my corporation",
@@ -96,8 +100,8 @@ def create_access_token(
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    if using_jit:
-        to_encode.update({"jit": uuid.uuid4().hex})
+    if using_jti:
+        to_encode.update({"jti": jti})
     if created_at:
         to_encode.update({"iat": datetime.utcnow()})
     # if not_before:
@@ -167,7 +171,9 @@ async def get_current_user(
                 detail="Not acceptable scope",
                 headers={"WWW-Authenticate": authenticate_value},
             )
-        token_data = TokenData(scopes=token_scopes, username=username)
+        token_data = TokenData(
+            scopes=token_scopes, username=username, jti=payload.get("jti")
+        )
     except ExpiredSignatureError:
         raise credentials_exception(
             detail="your credentials are expired, you need to log in again"
@@ -181,6 +187,16 @@ async def get_current_user(
     user = user_dal.get_user_by_username(session=db, username=token_data.username)
     if user is None:
         raise credentials_exception()
+    tokens = user.tokens
+    jti = token_data.jti
+    for token in tokens:
+        if token_data.jti == token_data.jti:
+            print("jti is  in jwt ")
+            print("jti is  in jwt ")
+            print("jti is  in jwt ")
+            print("jti is  in jwt ")
+            print("jti is  in jwt ")
+            print("jti is  in jwt ")
     for scope in security_scopes.scopes:
         # if 'admin' in token_data.scopes:
         # 	return user

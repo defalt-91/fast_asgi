@@ -1,19 +1,23 @@
 from core.base_router import api_router
 from core.base_settings import settings
 from fastapi import FastAPI, responses
-from fastapi.middleware import cors, gzip, trustedhost, httpsredirect, wsgi
+from fastapi.middleware import cors, gzip, trustedhost
 from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
-
 from services.exception_services import rate_limit_exceeded_handler
 from services.security_service import limiter
-from starlette_csrf import CSRFMiddleware
+from slowapi.middleware import SlowAPIMiddleware
+
+from starlette.middleware.sessions import SessionMiddleware
+from timing_asgi import TimingMiddleware, TimingClient
+from timing_asgi.integrations import StarletteScopeToName
+from starlette_prometheus import metrics, PrometheusMiddleware
+
 
 some_file_path = "/home/defalt91/User_Authentication.mkv"
 app = FastAPI(
 	debug=settings.DEBUG,
 	title=settings.PROJECT_NAME,
-	version='1',
+	version="1",
 	docs_url="/docs",
 	redoc_url="/redoc",
 	openapi_url="/openapi.json",
@@ -34,8 +38,7 @@ app.add_middleware(
 )
 # app.add_middleware(httpsredirect.HTTPSRedirectMiddleware)
 app.add_middleware(
-	trustedhost.TrustedHostMiddleware,
-	allowed_hosts=settings.ALLOWED_HOSTS
+	trustedhost.TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS
 )
 #
 # app.add_middleware(
@@ -50,9 +53,30 @@ app.add_middleware(
 # )
 app.add_middleware(gzip.GZipMiddleware, minimum_size=1000)
 app.add_middleware(SlowAPIMiddleware)
-
+app.add_middleware(SessionMiddleware, secret_key="!secret")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+app.add_route("/metrics/", metrics)
+
+
+class PrintTimings(TimingClient):
+	def timing(self, metric_name, timing, tags):
+		print(metric_name, timing, tags)
+
+
+app.add_middleware(
+	TimingMiddleware, client=PrintTimings(), metric_namer=StarletteScopeToName(prefix="myapp", starlette_app=app), )
+app.add_middleware(PrometheusMiddleware)
+
+
+@app.on_event("startup")
+async def startup():
+	print("Startup")
+
+
+@app.on_event("shutdown")
+async def shutdown():
+	print("Shutdown")
 
 
 @app.get("/")
@@ -63,10 +87,7 @@ async def home():
 # asynchronous
 @app.get("/video")
 async def main():
-	return responses.FileResponse(
-		some_file_path
-		, media_type="video/mp4"
-	)
+	return responses.FileResponse(some_file_path, media_type="video/mp4")
 
 
 # synchronous

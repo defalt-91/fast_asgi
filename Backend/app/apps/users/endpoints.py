@@ -1,4 +1,4 @@
-from fastapi import Depends, Query, APIRouter
+from fastapi import Depends, Query, APIRouter,File
 from typing import Any, Tuple, List
 from sqlalchemy.orm.session import Session
 
@@ -166,3 +166,8 @@ def deactivate_user_by_id(
     if not db_user:
         raise errors.user_not_exist_username
     return user_dal.deactivate(session=session, user=db_user)
+
+
+
+@accounts.post('/profile/pic')
+async def profile_picture_test(image:File):

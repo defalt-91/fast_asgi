@@ -31,10 +31,8 @@ class PostDal(BaseDAL[Post, PostUpdate, PostCreate]):
 		
 		user_posts = session.execute(
 			select(self.model)
-				.join(User.id)
 				.where(self.model.author_id == user.id)
 				.offset(skip).limit(limit)
-				.options(selectinload(Post.author))
 		).scalars().all()
 		return user_posts
 	

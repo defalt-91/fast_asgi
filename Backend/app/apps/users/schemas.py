@@ -1,4 +1,5 @@
 import gzip
+from datetime import datetime
 from operator import setitem
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
@@ -71,8 +72,9 @@ class UserCreate(UserBase):
 
 class UserInDBBase(UserBase):
     id: Optional[int] = None
+    date_joined: Optional[datetime] = None
+    is_staff: Optional[bool] = False
     scopes: List[ScopeOut]
-
     # @validator("scopes", pre=True)
     # def list_of_scopes(cls, v):
     #     return [scope for scope in v]
@@ -89,26 +91,9 @@ class User(UserInDBBase):
     id: Optional[int] = None
     username: Optional[str] = None
     full_name: Optional[str] = None
-    # scopes: List[Dict[str, str]]
-    #
-    # @validator("scopes", pre=True)
-    # def list_of_scopes(cls, v):
-    #     mylist = []
-    #     for i in v:
-    #         mydict = dict()
-    #         setitem(mydict, str(i.code), str(i.description))
-    #         mylist.append(mydict)
-    #     return mylist
 
     class Config:
         orm_mode = True
-
-
-class UserProfile:
-    username: Optional[str] = None
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = None
-    id: Optional[int] = None
 
 
 class UserDeactivate(UserInDBBase):
@@ -119,13 +104,6 @@ class Msg(BaseModel):
     msg: str
 
 
-class Author(BaseModel):
-    username: Optional[str] = None
-
-    class Config:
-        orm_mode = True
-
-
 class Password(BaseModel):
     password1: Optional[str] = None
     password2: Optional[str] = None
@@ -133,7 +111,7 @@ class Password(BaseModel):
     @root_validator()
     def password_validators(cls, values):
         pwd1, pwd2 = values.get("password1"), values.get("password2")
-        if pwd1 and pwd2 and not pwd2 == pwd1:
+        if (pwd1 and pwd2) and not (pwd2 == pwd1):
             raise ValueError("Passwords do not match")
         if len(pwd1) < 7:
             raise ValueError("password need to be more than 8 characters")

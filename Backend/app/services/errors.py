@@ -57,6 +57,13 @@ user_not_exist_id = HTTPException(
 two_password_didnt_match = HTTPException(
     detail="two passwords are different", status_code=status.HTTP_400_BAD_REQUEST
 )
+token_didnt_created = HTTPException(
+    detail="token created but it's not  saved !", status_code=status.HTTP_409_CONFLICT
+)
+user_have_not_active_token = HTTPException(
+    detail="This user didn't have any active token",
+    status_code=status.HTTP_404_NOT_FOUND,
+)
 
 
 def credentials_exception(
