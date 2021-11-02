@@ -11,6 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from timing_asgi import TimingMiddleware, TimingClient
 from timing_asgi.integrations import StarletteScopeToName
 from starlette_prometheus import metrics, PrometheusMiddleware
+from fastapi.staticfiles import StaticFiles
 
 
 some_file_path = "/home/defalt91/User_Authentication.mkv"
@@ -67,6 +68,14 @@ class PrintTimings(TimingClient):
 app.add_middleware(
 	TimingMiddleware, client=PrintTimings(), metric_namer=StarletteScopeToName(prefix="myapp", starlette_app=app), )
 app.add_middleware(PrometheusMiddleware)
+
+app.mount(
+	f"/{settings.STATICFILES_URL}", StaticFiles(
+		directory=settings.STATICFILES_ROOT,
+		# check_dir=True,
+		# packages=["ngFront"]
+	)
+)
 
 
 @app.on_event("startup")

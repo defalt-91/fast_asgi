@@ -1,8 +1,7 @@
-from sqlalchemy import select, update, desc
+from sqlalchemy import select, desc
 from typing import Any, Dict, List, Optional, Type, TypeVar, Generic, Union
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, selectinload
-from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 
 from services import errors

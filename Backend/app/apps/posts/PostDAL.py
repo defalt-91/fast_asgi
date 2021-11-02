@@ -7,7 +7,7 @@ from services.base_dal import BaseDAL
 from services import errors
 from sqlalchemy.orm.session import Session
 from typing import Any, Dict, Optional, Union
-from services.password_service import get_password_hash, verify_password
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class PostDal(BaseDAL[Post, PostUpdate, PostCreate]):
@@ -54,6 +54,11 @@ class PostDal(BaseDAL[Post, PostUpdate, PostCreate]):
 			return db_obj
 		except:
 			raise errors.something_bad_happened
+	
+	async def get_posts_async_scoped_session(self, session: AsyncSession):
+		stmt = select(Post).limit(10)
+		posts = await session.execute(stmt)
+		return posts.scalars().all()
 
 
 post_dal = PostDal(Post)

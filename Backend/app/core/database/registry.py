@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql.sqltypes import DateTime, Integer
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.ext.compiler import compiles
-
+from .events import async_engine
 
 class utcnow(FunctionElement):
     type = DateTime()

@@ -4,6 +4,7 @@ from tenacity import after_log, before_log, retry, stop_after_attempt, wait_fixe
 
 from core.database.session import SessionLocal
 
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ def init() -> None:
 	except Exception as e:
 		logger.error(e)
 		raise e
+	logger.error(db.in_transaction())
 
 
 def main() -> None:

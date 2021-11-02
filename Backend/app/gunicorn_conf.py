@@ -87,7 +87,7 @@ keepalive = int(keepalive_str)
 preload_app = False
 sendfile = None
 reuse_port = False
-chdir = '/app/'
+# chdir = '/app/'
 daemon = False
 # raw_env = ["FOO=1"]
 user = "1000"

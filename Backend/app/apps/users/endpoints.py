@@ -169,5 +169,5 @@ def deactivate_user_by_id(
 
 
 
-@accounts.post('/profile/pic')
-async def profile_picture_test(image:File):
+# @accounts.post('/profile/pic')
+# async def profile_picture_test(image:File):

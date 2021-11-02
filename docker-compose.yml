@@ -21,20 +21,19 @@ services:
   #    restart: on-failure
 
   asgi_app:
-    image: fastasgi
+    image: fastasgi:v2
     build:
       dockerfile: backend.dockerfile
-      context: Backend/app
+      context: ./Backend
     container_name: python_asgi
-    environment:
-      DOCKER_MODE: "True"
     env_file: .env
     volumes:
-      - ./Backend/app:/app/
-    command: gunicorn --reload -c python:gunicorn_conf
+      - ./Backend:/fast_asgi_app/
+#    command: bash ./start.sh
+#    command: gunicorn --reload -c Backend/app/gunicorn_conf.py
+    restart: "no"
     depends_on:
       - databases
-    #    restart: on-failure
     networks:
       Asgi_private_network:
       Asgi_hidden_network:
@@ -72,6 +71,7 @@ networks:
     driver: bridge
     internal: true
     name: hidden_one
+
 volumes:
   fast_db_data:
   pg_admin_data:

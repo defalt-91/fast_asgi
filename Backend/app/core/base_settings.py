@@ -3,25 +3,54 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from pydantic import BaseSettings, EmailStr, PostgresDsn, validator
+from pydantic import BaseSettings, EmailStr, PostgresDsn, validator, root_validator
 
 
 class Settings(BaseSettings):
-	# class Config:
-	# 	env_file = ".env"
-	# DOCKER_MODE = Optional[bool] = True
+	class Config:
+		env_file = ".env"
+	
+	DOCKER_MODE: Optional[bool] = True
+	BASE_DIR: Optional[Path] = Path(__file__).resolve().parent.parent.parent
+	STATICFILES_URL: Optional[str] = "static"
+	STATICFILES_ROOT: Path
+	
+	@validator('STATICFILES_ROOT', pre=True)
+	def set_staticfiles_dir(cls, v: str):
+		if v:
+			user_set_path = Path(__file__).resolve().parent.parent.parent / v
+			if user_set_path.exists():
+				if user_set_path.is_dir():
+					return user_set_path
+				else:
+					raise ValueError(
+						"This path exist and its not a directory, give me "
+						"another name or delete that file and run me again"
+					)
+			else:
+				user_set_path.mkdir(exist_ok=True, parents=True)
+				return user_set_path
+		else:
+			app_path: Path = Path(__file__).resolve().parent.parent.parent
+			default_path = app_path / 'staticfiles'
+			if default_path.exists():
+				if default_path.is_dir():
+					return default_path
+				else:
+					raise ValueError(
+						"there is a file with staticfiles name in the base directory, "
+						"please set staticfiles dir in environment or delete the file"
+					)
+			else:
+				try:
+					default_path.mkdir(exist_ok=True, parents=True)
+				# Path("/fast_asgi_app/").joinpath('staticfiles').mkdir(exist_ok=True, parents=True)
+				except Exception as e:
+					raise ValueError(e)
+				return default_path
 	
 	"""APPLICATION SETTINGS"""
-	BASE_DIR: Path
-	BACKEND_DIR: Path = BASE_DIR.parent
 	
-	@validator('BASE_DIR')
-	def base_dir_path(cls, v):
-		if Path(__file__).resolve().parent.parent.parent.exists():
-			base_dir = Path(__file__).resolve().parent.parent
-			staticfile = base_dir.mkdir()
-	
-	STATICFILES_DIR: Path
 	DEBUG: bool
 	""" Server Settings"""
 	API_PREFIX: Optional[str] = None
