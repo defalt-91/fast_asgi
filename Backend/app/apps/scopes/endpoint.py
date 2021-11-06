@@ -58,7 +58,7 @@ async def scope_users(
     statement = select(Scope).where(Scope.id == scope)
     scope = session.execute(statement=statement).scalar_one_or_none()
     if not scope:
-        raise errors.not_found_error
+        raise errors.not_found_error()
     return scope
 
 
@@ -71,7 +71,7 @@ async def delete_scope(
     """deleting scopes with super_user, please be caution"""
     wanted_scope = session.get(Scope, scope_id)
     if not wanted_scope:
-        raise errors.not_found_error
+        raise errors.not_found_error()
     session.delete(wanted_scope)
     session.commit()
     return {

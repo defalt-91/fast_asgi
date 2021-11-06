@@ -1,16 +1,17 @@
 import logging
 
-from core.database.session import SessionLocal
+from core.database.session import SessionFactory
 
 from services.init_db import init_db
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def init() -> None:
-	db = SessionLocal()
-	init_db(db)
+	with SessionFactory().begin() as session:
+		init_db(session)
 
 
 def main() -> None:

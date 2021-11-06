@@ -73,7 +73,7 @@ def send_reset_password_email(email_to: str, username: str, token: str) -> None:
 def send_new_account_email(email_to: str, username: str, password: str) -> None:
 	project_name = settings.PROJECT_NAME
 	subject = f"{project_name} - New account for user {username}"
-	with open(Path(settings.EMAIL_TEMPLATES_DIR) / "new_account.html") as f:
+	with open(settings.EMAIL_TEMPLATES_DIR / "new_account.html") as f:
 		template_str = f.read()
 	link = settings.SERVER_HOST
 	send_email(
@@ -85,8 +85,8 @@ def send_new_account_email(email_to: str, username: str, password: str) -> None:
 			"username": username,
 			"password": password,
 			"email": email_to,
-			"link": link,
-		},
+			"link": link
+		}
 	)
 
 

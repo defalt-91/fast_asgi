@@ -22,9 +22,9 @@ class PostDal(BaseDAL[Post, PostUpdate, PostCreate]):
 				)
 			).scalar_one()
 		except:
-			raise errors.something_bad_happened
+			raise errors.something_bad_happened()
 		if not query:
-			raise errors.not_found_error
+			raise errors.not_found_error()
 		return query
 	
 	def get_multi_with_author(self, session: Session, skip: int, limit: int, user: User):
@@ -53,7 +53,7 @@ class PostDal(BaseDAL[Post, PostUpdate, PostCreate]):
 			session.commit()
 			return db_obj
 		except:
-			raise errors.something_bad_happened
+			raise errors.something_bad_happened()
 	
 	async def get_posts_async_scoped_session(self, session: AsyncSession):
 		stmt = select(Post).limit(10)

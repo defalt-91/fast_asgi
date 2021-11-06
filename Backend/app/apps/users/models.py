@@ -27,35 +27,40 @@ class User(NameAndIDMixin):
 	is_active = Column(Boolean(), default=True, nullable=False, index=True)
 	is_superuser = Column(Boolean(), default=False, nullable=False, index=True)
 	date_joined = Column(DateTime(timezone=True), server_default=utcnow(), index=True)
-	is_staff = Column(
-		Boolean,
-		default=False,
-		doc="if true user can login to admin app",
-	)
+	is_staff = Column(Boolean, default=False, doc="if true user can login to admin app")
 	profile = relationship(
 		"Profile",
 		back_populates="user",
-		cascade="all,delete, delete-orphan",
+		# FOR DELETING RELATIONAL OBJECTS IN DB NOT IN ORM, NEED on_delete="all,delete" ON THE OTHER SIDE
+		cascade="all, delete",
+		passive_deletes=True,
 		uselist=False,
 	)
 	posts = relationship(
 		"Post",
 		back_populates="author",
-		cascade="all, delete, delete-orphan",
+		# FOR DELETING RELATIONAL OBJECTS IN DB NOT IN ORM, NEED on_delete="all,delete" ON THE OTHER SIDE
+		cascade="all, delete",
+		passive_deletes=True,
 		order_by="desc(Post.created_at)",
 	)
 	scopes = relationship(
 		"Scope",
 		secondary=UserScopes.__tablename__,
 		back_populates="users",
-		cascade="all, delete, delete-orphan",
+		# FOR DELETING RELATIONAL OBJECTS IN DB NOT IN ORM, NEED on_delete="all,delete" ON THE OTHER SIDE
+		cascade="all, delete",
+		passive_deletes=True,
 		# one-to-one Parent.child
-		single_parent=True,
+		# single_parent=True,
 	)
 	tokens = relationship(
 		"Token",
 		back_populates="user",
 		order_by="desc(Token.created_at)",
+		# FOR DELETING RELATIONAL OBJECTS IN DB NOT IN ORM, NEED on_delete="all,delete" ON THE OTHER SIDE
+		cascade="all, delete",
+		passive_deletes=True,
 	)
 	
 	def __str__(self):

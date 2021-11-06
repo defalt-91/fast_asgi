@@ -4,12 +4,12 @@ from .UserDAL import user_dal
 
 
 class UserIsCurrentOrSudo:
-    def __init__(self, current_user, user):
+    def __init__(self, current_user:models.User, user):
         self.current_user = current_user
         self.user = user
 
     def has_permission(self):
-        if not user_dal.is_superuser(self.current_user) and (
+        if not self.current_user.is_superuser and (
             self.current_user.id != self.user.id
         ):
             raise HTTPException(
@@ -34,7 +34,7 @@ class IsAuthorOrSudo:
         self.current_user = current_user
 
     def has_permission(self) -> bool:
-        if not user_dal.is_superuser(self.current_user) and (
+        if not self.current_user.is_superuser(self.current_user) and (
             self.obj.author_id != self.current_user.id
         ):
             raise HTTPException(

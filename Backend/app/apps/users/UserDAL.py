@@ -1,7 +1,7 @@
 from services.base_dal import BaseDAL
 from . import schemas
 from .models import User
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import select
 from typing import Any, Dict, List, Optional, Union
 from pydantic import EmailStr
@@ -19,20 +19,16 @@ from ..scopes.models import Scope, ScopesEnum, UserScopes
 
 
 class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
-	
 	def create(self, session: Session, obj_in: schemas.UserCreate) -> Optional[User]:
 		password_hash = get_password_hash(obj_in.password2)
-		user: User = User()
+		user = User()
 		user.username = obj_in.username
 		user.email = obj_in.email
 		user.hashed_password = password_hash
 		user.is_active = obj_in.is_active
 		user.is_superuser = obj_in.is_superuser
 		user.full_name = obj_in.full_name
-		session.add(user)
-		session.commit()
-		session.refresh(user)
-		return user
+		return self.save(session=session, obj=user)
 	
 	def get_multi(
 		self, session: Session, skip: int = 0, limit: int = 10
@@ -61,24 +57,20 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 			session=session, session_model=session_model, obj_in=updated_data
 		)
 	
-	@staticmethod
 	def deactivate(
+		self,
 		*,
 		session: Session,
 		user: User,
 	) -> Optional[User]:
 		user.is_active = False
-		session.add(user)
-		session.commit()
-		session.refresh(user)
-		return user
+		return self.save(session, user)
 	
 	# obj_in["is_active"] = False
 	# return super().update(session=session, obj_in=obj_in, session_model=db_obj)
 	
-	@staticmethod
 	def add_user_scope(
-		session: Session, user: User, scope: ScopesEnum
+		self, session: Session, user: User, scope: ScopesEnum
 	) -> Optional[User]:
 		if scope == ScopesEnum.ADMIN:
 			scope_object = Scope.admin_scope()
@@ -89,37 +81,47 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 		else:
 			scope_object = Scope()
 		user.scopes.append(scope_object)
-		session.add(user)
-		session.commit()
-		session.refresh(user)
+		
+		return self.save(session, user)
+	
+	def get_user_by_email(
+		self, session: Session, email: Union[str, EmailStr]
+	) -> Optional[User]:
+		statement = select(self.model).where(self.model.email == email)
+		user = session.execute(statement).scalar_one_or_none()
 		return user
 	
-	def get_user_by_email(self, session: Session, email: Union[str, EmailStr]) -> Optional[User]:
-		statement = select(self.model).where(self.model.email == email)
-		return session.execute(statement).scalar_one_or_none()
-	
 	def get_user_by_username(self, session: Session, username: str) -> Optional[User]:
-		statement = select(self.model).where(self.model.username == username)
-		return session.execute(statement).scalar_one_or_none()
+		existing_user = session.execute(
+			select(self.model)
+				.where(self.model.username == username)
+				# .options(selectinload(self.model.scopes))
+		)
+		user = existing_user.scalar_one_or_none()
+		print(existing_user)
+		print(user.username)
+		print(user.scopes)
+		return user
 	
 	def check_username_exist(self, username: str, session: Session):
 		statement = select(self.model.username).where(self.model.username == username)
-		existing_username = session.execute(statement=statement).scalar_one_or_none()
+		existing_username_model = session.execute(statement=statement)
+		existing_username = existing_username_model.scalar_one_or_none()
 		return existing_username
 	
 	def check_email_exist(self, email: EmailStr, session: Session):
 		statement = select(self.model.email).where(self.model.email == email)
-		existing_username = session.execute(statement=statement).scalar_one_or_none()
+		existing_username_object = session.execute(statement=statement)
+		existing_username = existing_username_object.scalar_one_or_none()
 		return existing_username
 	
 	def authenticate_by_email(
 		self, session: Session, email: EmailStr, raw_password: str
 	):
 		execution = session.execute(
-			select(self.model.email, self.model.hashed_password).where(
-				self.model.email == email
-			)
+			select(self.model.email, self.model.hashed_password).where()
 		)
+		# user = session.get(self.model, self.model.email == email)
 		user: User = execution.scalar_one_or_none()
 		if user:
 			if verify_password(
@@ -147,14 +149,6 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 				return None
 		else:
 			return None
-	
-	@staticmethod
-	def is_active(user_in: User) -> bool:
-		return user_in.is_active
-	
-	@staticmethod
-	def is_superuser(user_in: User) -> bool:
-		return user_in.is_superuser
 
 
 user_dal: UserDAL = UserDAL(User)

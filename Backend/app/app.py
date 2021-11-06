@@ -14,6 +14,8 @@ from starlette_prometheus import metrics, PrometheusMiddleware
 from fastapi.staticfiles import StaticFiles
 
 
+# from starlette_csrf import CSRFMiddleware
+# from events import observer
 some_file_path = "/home/defalt91/User_Authentication.mkv"
 app = FastAPI(
 	debug=settings.DEBUG,
@@ -66,16 +68,22 @@ class PrintTimings(TimingClient):
 
 
 app.add_middleware(
-	TimingMiddleware, client=PrintTimings(), metric_namer=StarletteScopeToName(prefix="myapp", starlette_app=app), )
-app.add_middleware(PrometheusMiddleware)
+	TimingMiddleware,
+	client=PrintTimings(),
+	metric_namer=StarletteScopeToName(prefix="myapp", starlette_app=app),
+)
+# app.add_middleware(PrometheusMiddleware)
 
 app.mount(
-	f"/{settings.STATICFILES_URL}", StaticFiles(
+	f"/{settings.STATICFILES_URL}",
+	StaticFiles(
 		directory=settings.STATICFILES_ROOT,
 		# check_dir=True,
 		# packages=["ngFront"]
-	)
+	),
 )
+# executing all listeners (adding them to function list of their event_types)
+import core.base_listener
 
 
 @app.on_event("startup")

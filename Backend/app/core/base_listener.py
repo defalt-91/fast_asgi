@@ -1,0 +1,4 @@
+from apps.users.user_event_listeners import subscribe_to_user_registration
+
+
+subscribe_to_user_registration()
