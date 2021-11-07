@@ -130,7 +130,7 @@ async def authorization_server(
 	# session.commit()
 	return {
 		"token_type": "bearer",
-		"access_token": access_token,
+		"access_token": access_token.access_token,
 		"access_token_exp_timestamp": access_claims.exp_timestamp,
 		"access_token_exp_date": access_claims.exp,
 		"refresh_token": {
