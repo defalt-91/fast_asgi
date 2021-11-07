@@ -1,87 +1,91 @@
-from typing import Any, List, Optional
-from sqlalchemy.orm.session import Session
-from fastapi import Depends, Request, Response, APIRouter, HTTPException, Query, Body
-from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import EmailStr
-from dataclasses import dataclass, field
-
-from core.base_settings import get_settings
-from core.database.session import get_session
-from services import security_service, email_service, errors, scopes, password_service
+import typing
+import sqlalchemy.orm.session as orm_ses
+import fastapi.exceptions as fast_exc
+import fastapi.security.oauth2 as fast_oauth
+import fastapi.param_functions as fast_param
+import fastapi.routing as fast_routing
+import pydantic.networks as py_net
 from .TokenDAL import token_dal
-from .schemas import AccessTokenJwtClaims, TokenScopesTypes
-import apps.scopes.models as scope_model
-import apps.scopes.schemas as scope_schema
-from ..users import models, schemas, UserDAL
+import core.base_settings as base_setting
+import core.database.session as base_ses
+import apps.users.models as u_models
+import apps.users.schemas as u_schemas
+import apps.token.schemas as t_schemas
+import services.security_service as security_service
+import services.email_service as email_service
+import services.errors as errors
+import services.password_service as password_service
+import starlette.status as s_status
+import apps.token.deps as tok_deps
+import starlette.requests as st_req
+import starlette.responses as st_res
+from apps.users.UserDAL import user_dal
 
 
-settings = get_settings()
+settings = base_setting.get_settings()
 
-token_router = APIRouter()
-
-
-@dataclass
-class TestDataclasses:
-	id: Optional[int] = Body(default=52, description='id of user', ge=12)
-	last_name: str = field(default="your family name")
-	name: str = field(default='your name')
+token_router = fast_routing.APIRouter()
 
 
-@token_router.post('/dataclasses')
-async def using_dataclasses(usr: TestDataclasses):
-	return usr
-
-
-@token_router.post("/verify", response_model=schemas.User, response_model_exclude={"is_superuser", "is_active"}, )
+@token_router.post("/verify", response_model=u_schemas.User, response_model_exclude={"is_superuser", "is_active"}, )
 @security_service.limiter.limit("5/minutes")
 async def test_token(
-	request: Request, a=Depends(get_session), current_user: models.User = Depends(security_service.get_current_user)
-) -> Any:
+	request: st_req.Request,
+	current_user: u_models.User = fast_param.Depends(security_service.get_current_user),
+) -> typing.Any:
 	"""Test access token and get user details"""
 	return current_user
 
 
-@token_router.post("/password-recovery/{email}", response_model=schemas.Msg)
+@token_router.post("/password-recovery/{email}", response_model=u_schemas.Msg)
 @security_service.limiter.limit("5/minutes")
-def recover_password(request: Request, *, email: EmailStr = Query(...), db: Session = Depends(get_session)):
+def recover_password(
+	*, request: st_req.Request, email: py_net.EmailStr = fast_param.Query(...),
+	db: orm_ses.Session = fast_param.Depends(base_ses.get_session), ):
 	"""Password Recovery"""
-	user = UserDAL.user_dal.get_user_by_email(session=db, email=email)
+	user = user_dal.get_user_by_email(session=db, email=email)
 	if not user:
-		raise HTTPException(status_code=404, detail="The user with this email does not exist in the system.")
+		raise fast_exc.HTTPException(
+			status_code=404,
+			detail="The user with this email does not exist in the system.",
+		)
 	password_reset_token = email_service.generate_password_reset_token(email=email)
-	email_service.send_reset_password_email(email_to=user.email, username=user.username, token=password_reset_token)
+	email_service.send_reset_password_email(
+		email_to=user.email, username=user.username, token=password_reset_token
+	)
 	return {"msg": "Password recovery email sent"}
 
 
-@token_router.post("/reset-password/", response_model=schemas.Msg)
+@token_router.post("/reset-password/", response_model=u_schemas.Msg)
 @security_service.limiter.limit("5/minutes")
 def reset_password(
-	request: Request, token: str = Body(...), new_password: str = Body(...),
-	db: Session = Depends(get_session), ) -> Any:
+	request: st_req.Request, token: str = fast_param.Body(...),
+	new_password: str = fast_param.Body(...),
+	db: orm_ses.Session = fast_param.Depends(base_ses.get_session), ) -> typing.Any:
 	"""Reset password"""
 	email = email_service.verify_password_reset_token(token)
 	if not email:
-		raise HTTPException(status_code=400, detail="Invalid token")
-	user = UserDAL.user_dal.get_user_by_email(session=db, email=email)
+		raise fast_exc.HTTPException(status_code=400, detail="Invalid token")
+	user = user_dal.get(session=db, email=email)
 	if not user:
 		raise errors.user_not_exist_username()
 	if not user.is_authenticated:
 		raise errors.inactive_user()
 	hashed_password = password_service.get_password_hash(new_password)
 	user.hashed_password = hashed_password
-	UserDAL.user_dal.save(session=db, obj=user)
+	user_dal.save(session=db, obj=user)
 	return {"msg": "Password updated successfully"}
 
 
 @token_router.post("/token")
 @security_service.limiter.limit("5/minutes")
 async def authorization_server(
-	request: Request,
-	response: Response,
-	form_data: OAuth2PasswordRequestForm = Depends(),
-	session: Session = Depends(get_session),
-) -> Any:
-	user: Optional[models.User] = UserDAL.user_dal.authenticate_by_username(
+	request: st_req.Request,
+	response: st_res.Response,
+	form_data: fast_oauth.OAuth2PasswordRequestForm = fast_param.Depends(),
+	session: orm_ses.Session = fast_param.Depends(base_ses.get_session),
+) -> typing.Any:
+	user: typing.Optional[u_models.User] = user_dal.authenticate_by_username(
 		session=session, username=form_data.username, raw_password=form_data.password
 	)
 	if not user:
@@ -89,51 +93,74 @@ async def authorization_server(
 	if not user.is_authenticated:
 		raise errors.inactive_user()
 	
-	allowed_scopes: List[scopes.ScopeTypes] = []
-	user_scopes: List[scope_model.Scope] = user.scopes
-	if user.is_superuser:
-		allowed_scopes.append(TokenScopesTypes.ADMIN.value)
-	else:
-		for i in user_scopes:
-			j = scope_schema.ScopeOut.from_orm(i)
-			allowed_scopes.append(j.code)
-	# admin scope is just enough
-	
+	allowed_scopes = await tok_deps.add_user_scopes(user=user)
 	# for scope in form_data.scopes:
 	# 	if scope.lower() == 'me':
 	# 		allowed_scopes.append('me')
 	# 	if scope.lower() == 'posts':
 	# 		allowed_scopes.append('posts')
-	claims_pyd = AccessTokenJwtClaims(sub=user.username, scopes=allowed_scopes)
-	access_token = security_service.create_access_token(claims_pyd)
+	access_claims = t_schemas.AccessTokenJwtClaims(
+		sub=user.username, scopes=allowed_scopes
+	)
+	if user.is_admin:
+		access_claims.admin = True
+	access_token = security_service.create_access_token(access_claims)
+	refresh_claims = t_schemas.RefreshTokenJwtClaims(sub=user.username)
+	refresh_token = security_service.create_refresh_token(token_claims=refresh_claims)
 	response.set_cookie(
-		key="authorization",
-		value=f"bearer {access_token}",
+		key="refresh_token",
+		value=f"{refresh_token}",
 		httponly=True,
 		samesite="strict",  # sending just to the site that wrote the cookie
 		secure=False,
-		expires=settings.ACCESS_TOKEN_EXPIRATION_MINUTES * 60,
+		expires=settings.REFRESH_TOKEN_EXPIRATION_DAYS * 24 * 60 * 60,
 		# domain="myawesomesite.io",  # subdomains are ignored , like api.myawesomesite.io ... just the domain in
 		# needed
 		path="/",
 	)
-	# token = Token()
-	# token.jwt = access_token
-	# token.token_type = TokenTypes.ACCESS_TOKEN
-	# token.user_id = user.id
-	# token.jti = claims_pyd.jti
-	# session.add(token)
+	token_dal.create_refresh_token(
+		session=session,
+		refresh_claims=refresh_claims,
+		user_id=user.id,
+		refresh_token=refresh_token,
+	)
+	# tokens = token_dal.get_multi_with_user(session=session, sub=user.id)
+	# for token in tokens:
+	# 	session.delete(token)
 	# session.commit()
-	# session.refresh(token)
-	return access_token
+	return {
+		"token_type": "bearer",
+		"access_token": access_token,
+		"access_token_exp_timestamp": access_claims.exp_timestamp,
+		"access_token_exp_date": access_claims.exp,
+		"refresh_token": {
+			"token_type": "refresh_token",
+			"token": refresh_token,
+			"exp_date": refresh_claims.exp,
+			"exp_timestamp": refresh_claims.exp_timestamp,
+		},
+	}
 
 
-@token_router.get("/{user_id}", dependencies=[Depends(security_service.get_current_user)])
-async def user_tokens(
-	user_id: int,
-	session: Session = Depends(get_session),
-):
-	token_list = token_dal.get_access_token(session=session, user_id=user_id)
+@token_router.post(
+	"/refresh",
+	status_code=s_status.HTTP_200_OK,
+	response_model=t_schemas.AccessRefreshedForResponse,
+	response_model_include={'access_token', 'expiration_time', 'audience', 'token_type', 'expiration_timestamp'}
+)
+async def get_new_access_token(
+	session: orm_ses.Session = fast_param.Depends(base_ses.get_session),
+	refresh_token: tok_deps.oauth2_refresh_token = fast_param.Depends(),
+) -> typing.Optional[t_schemas.AccessRefreshedForResponse]:
+	access_token_with_claims = await tok_deps.access_token_from_refresh_token(
+		session=session, refresh_token=refresh_token
+	)
+	return access_token_with_claims
+
+
+@token_router.get("/{user_id}", dependencies=[fast_param.Depends(security_service.get_current_user)])
+async def user_tokens(user_id: int, session: orm_ses.Session = fast_param.Depends(base_ses.get_session), ):
+	token_list = token_dal.get_access_tokens(session=session, user_id=user_id)
 	if not token_list:
 		raise errors.user_have_not_active_token()
 	return token_list

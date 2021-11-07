@@ -1,29 +1,29 @@
-from sqlalchemy.sql.schema import Column, ForeignKey
-from sqlalchemy.sql.sqltypes import String, Text
-from sqlalchemy.orm import relationship
-from core.database.registry import NameAndIDMixin, mapper_registry
-from core.database.session import SessionFactory
-from sqlalchemy import select
-from enum import unique, IntEnum
+import sqlalchemy.orm as sql_orm
+import core.database.registry as core_reg
+import core.database.session as core_ses
+import enum
+import sqlalchemy.sql.sqltypes as sql_type
+import sqlalchemy.sql.schema as sql_schema
+import sqlalchemy.sql.expression as sql_exp
 
 
-@unique
-class ScopesEnum(IntEnum):
+@enum.unique
+class ScopesEnum(enum.IntEnum):
 	ME = 1
 	POSTS = 2
 	ADMIN = 3
 
 
-@mapper_registry.mapped
+@core_reg.mapper_registry.mapped
 class UserScopes:
 	__tablename__ = "userscopes"
-	user_id = Column(
+	user_id = sql_schema.Column(
 		# A database level ON DELETE cascade is configured effectively on the many-to-one side of the relationship
-		ForeignKey("user.id", ondelete="CASCADE"), primary_key=True, nullable=False
+		sql_schema.ForeignKey("user.id", ondelete="CASCADE"), primary_key=True, nullable=False
 	)
-	scope_id = Column(
+	scope_id = sql_schema.Column(
 		# A database level ON DELETE cascade is configured effectively on the many-to-one side of the relationship
-		ForeignKey("scope.id", ondelete="CASCADE"), primary_key=True, nullable=False
+		sql_schema.ForeignKey("scope.id", ondelete="CASCADE"), primary_key=True, nullable=False
 	)
 	
 	def __repr__(self):
@@ -33,11 +33,11 @@ class UserScopes:
 		return self.__repr__()
 
 
-@mapper_registry.mapped
-class Scope(NameAndIDMixin):
-	code = Column(String(50), nullable=False, unique=True)
-	description = Column(String(255))
-	users = relationship(
+@core_reg.mapper_registry.mapped
+class Scope(core_reg.NameAndIDMixin):
+	code = sql_schema.Column(sql_type.String(50), nullable=False, unique=True)
+	description = sql_schema.Column(sql_type.String(255))
+	users = sql_orm.relationship(
 		"User",
 		secondary=UserScopes.__tablename__,
 		back_populates="scopes",
@@ -53,24 +53,24 @@ class Scope(NameAndIDMixin):
 	
 	@staticmethod
 	def admin_scope():
-		with SessionFactory() as session:
-			statement = select(Scope).where(Scope.id == ScopesEnum.ADMIN.value)
+		with core_ses.SessionFactory() as session:
+			statement = sql_exp.select(Scope).where(Scope.id == ScopesEnum.ADMIN.value)
 			returned_tuple = session.execute(statement)
 			row = returned_tuple.scalar_one_or_none()
 		return row
 	
 	@staticmethod
 	def posts_scope():
-		with SessionFactory.begin() as session:
-			statement = select(Scope).where(Scope.id == ScopesEnum.POSTS.value)
+		with core_ses.SessionFactory.begin() as session:
+			statement = sql_exp.select(Scope).where(Scope.id == ScopesEnum.POSTS.value)
 			returned_tuple = session.execute(statement)
 			row = returned_tuple.scalar_one_or_none()
 		return row
 	
 	@staticmethod
 	def me_scope():
-		with SessionFactory.begin() as session:
-			statement = select(Scope).where(Scope.id == ScopesEnum.ME.value)
+		with core_ses.SessionFactory.begin() as session:
+			statement = sql_exp.select(Scope).where(Scope.id == ScopesEnum.ME.value)
 			returned_tuple = session.execute(statement)
 			row = returned_tuple.scalar_one_or_none()
 		return row

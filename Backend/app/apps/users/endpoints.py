@@ -1,27 +1,30 @@
-from fastapi import Depends, Query, APIRouter, File, UploadFile, Request, Response
-from typing import Any, Tuple, List
-from sqlalchemy.orm.session import Session
+from fastapi import APIRouter, Depends, Request, Response, Query, File, UploadFile
 from PIL import Image
-from core.base_settings import settings
+from typing import List, Optional, Any, Tuple
 from core.database.session import get_session
-import events.emmiters as emit
-from services import errors
-# from services.email_service import send_new_account_email
+from .schemas import UserCreate, User, UserUpdate
+from services.security_service import get_current_active_user, get_current_active_superuser, get_current_user
 from services.paginator import paginator
-from services.security_service import (
-	get_current_active_user,
-	get_current_active_superuser,
-)
-from . import models, schemas
+from sqlalchemy.orm.session import Session
+from services import errors
+from .models import User as UserModel
 from .UserDAL import user_dal
-from ..scopes.models import ScopesEnum
-from . import user_event_listeners
+from apps.scopes.models import Scope, ScopesEnum, UserScopes
+from core.base_settings import get_settings
+from events.emmiters import emmit_user_creation_action, emmit_password_reset_start_action, post_event
+from events.events import subscribe, post_event
+from .user_event_listeners import subscribe_to_user_registration
 
+
+settings = get_settings()
 
 accounts = APIRouter()
 
 
-@accounts.get("/", response_model=List[schemas.User], dependencies=[Depends(get_current_active_superuser)])
+@accounts.get(
+	"/", response_model=List[User],
+	dependencies=[Depends(get_current_active_superuser)]
+)
 async def read_users(
 	session: Session = Depends(get_session),
 	pagination: Tuple[int, int] = Depends(paginator),
@@ -32,9 +35,11 @@ async def read_users(
 	return users
 
 
-@accounts.post("/", response_model=schemas.User, dependencies=[Depends(get_current_active_superuser)])
+@accounts.post(
+	"/", response_model=User, dependencies=[Depends(get_current_active_superuser)]
+)
 async def create_superuser_with_superuser(
-	user_in: schemas.UserCreate,
+	user_in: UserCreate,
 	session: Session = Depends(get_session),
 ):
 	"""Create new user with current super_user"""
@@ -61,15 +66,15 @@ async def create_superuser_with_superuser(
 
 @accounts.put(
 	"/me",
-	response_model=schemas.User,
+	response_model=User,
 	response_model_exclude={"is_superuser", "is_active"},
 )
 async def update_user_me(
 	*,
-	user_in: schemas.UserUpdate,
+	user_in: UserUpdate,
 	session: Session = Depends(get_session),
-	current_user: models.User = Depends(get_current_active_user),
-) -> models.User:
+	current_user: UserModel = Depends(get_current_active_user),
+) -> UserModel:
 	"""Update own user."""
 	if user_in.email is not None and user_dal.get_user_by_email(
 			session=session, email=user_in.email
@@ -84,9 +89,9 @@ async def update_user_me(
 	return user
 
 
-@accounts.get("/me", response_model=schemas.User)
+@accounts.get("/me", response_model=User)
 async def read_user_me(
-	current_user: models.User = Depends(get_current_active_user),
+	current_user: UserModel = Depends(get_current_active_user),
 ) -> Any:
 	"""Get current user."""
 	return current_user
@@ -94,12 +99,12 @@ async def read_user_me(
 
 @accounts.post(
 	"/open",
-	response_model=schemas.User,
+	response_model=User,
 	response_model_exclude={"is_superuser", "is_active", "id"},
 )
 async def create_user_open(
-	user_in: schemas.UserCreate, session: Session = Depends(get_session)
-) -> models.User:
+	user_in: UserCreate, session: Session = Depends(get_session)
+) -> UserModel:
 	"""Create new user and send email without the need to be logged in."""
 	
 	if not settings.USERS_OPEN_REGISTRATION:
@@ -116,13 +121,13 @@ async def create_user_open(
 		if conflict_email:
 			raise errors.email_exist()
 	user_in.is_superuser = False
-	user_in_db: models.User = user_dal.create(session=session, obj_in=user_in)
+	user_in_db: UserModel = user_dal.create(session=session, obj_in=user_in)
 	if not user_in_db:
 		raise errors.something_bad_happened()
 	user_dal.add_user_scope(session=session, user=user_in_db, scope=ScopesEnum.ME)
 	user_dal.add_user_scope(session=session, user=user_in_db, scope=ScopesEnum.POSTS)
 	if settings.EMAILS_ENABLED and user_in.email:
-		emit.emmit_user_creation_action(user_in)
+		emmit_user_creation_action(user_in)
 	
 	return user_in_db
 
@@ -131,7 +136,7 @@ async def create_user_open(
 async def read_user_by_id(
 	*,
 	session: Session = Depends(get_session),
-	current_user: models.User = Depends(get_current_active_user),
+	current_user: UserModel = Depends(get_current_active_user),
 	user_id: int = Query(...),
 ) -> Any:
 	"""Get a specific user by id."""
@@ -144,12 +149,12 @@ async def read_user_by_id(
 	return user
 
 
-@accounts.put("/{user_id}", response_model=schemas.User, dependencies=[Depends(get_current_active_superuser)])
+@accounts.put("/{user_id}", response_model=User, dependencies=[Depends(get_current_active_superuser)])
 async def update_user_by_id(
 	*,
 	session: Session = Depends(get_session),
 	user_id: int,
-	user_in: schemas.UserUpdate,
+	user_in: UserUpdate,
 ) -> Any:
 	"""Update a user."""
 	db_user = user_dal.get_object_or_404(session=session, instance_id=user_id)
@@ -157,7 +162,7 @@ async def update_user_by_id(
 	return user
 
 
-@accounts.patch("/{user_id}", response_model=schemas.User, dependencies=[Depends(get_current_active_superuser)])
+@accounts.patch("/{user_id}", response_model=User, dependencies=[Depends(get_current_active_superuser)])
 def deactivate_user_by_id(
 	user_id: int,
 	session: Session = Depends(get_session)
@@ -189,4 +194,4 @@ async def profile_picture_test(
 	return {"dict"}
 
 
-user_event_listeners.subscribe_to_user_registration()
+subscribe_to_user_registration()

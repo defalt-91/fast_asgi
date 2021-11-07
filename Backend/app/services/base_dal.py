@@ -1,4 +1,4 @@
-from sqlalchemy import select, desc,delete,update
+from sqlalchemy import select, desc, delete, update
 from typing import Any, Dict, List, Optional, Type, TypeVar, Generic, Union
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, selectinload
@@ -83,6 +83,7 @@ class BaseDAL(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 	def delete(session: Session, instance) -> Any:
 		session.delete(instance)
 		session.commit()
+	
 	# stmt = delete(User).where(User.name == "squidward").execution_options(synchronize_session="fetch")
 	# session.execute(stmt)
 	@staticmethod

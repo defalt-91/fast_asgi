@@ -79,7 +79,8 @@ class Settings(BaseSettings):
 	
 	""" JWT SETTINGS"""
 	SECRET_KEY: str
-	ACCESS_TOKEN_EXPIRATION_MINUTES: int
+	ACCESS_TOKEN_EXPIRATION_MINUTES: Optional[int] = 60
+	REFRESH_TOKEN_EXPIRATION_DAYS: Optional[int] = 30
 	ALGORITHM: str
 	JWT_ISSUER: str
 	

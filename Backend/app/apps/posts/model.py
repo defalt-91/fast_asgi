@@ -1,16 +1,12 @@
-from sqlalchemy import Column, String
-from core.database.registry import (
-    DateMixin,
-    NameAndIDMixin,
-    mapper_registry,
-    RefAuthorMixin,
-)
+import sqlalchemy.types as sql_types
+import sqlalchemy.schema as sql_schema
+import core.database.registry as core_reg
 
 
-@mapper_registry.mapped
-class Post(NameAndIDMixin, RefAuthorMixin, DateMixin):
-    title = Column(String(255), nullable=True, index=True)
-    body = Column(String(255), nullable=True, index=True)
-
-    def __repr__(self):
-        return f"{self.title}"
+@core_reg.mapper_registry.mapped
+class Post(core_reg.NameAndIDMixin, core_reg.RefAuthorMixin, core_reg.DateMixin):
+	title = sql_schema.Column(sql_types.String(255), nullable=True, index=True)
+	body = sql_schema.Column(sql_types.String(255), nullable=True, index=True)
+	
+	def __repr__(self):
+		return f"{self.title}"

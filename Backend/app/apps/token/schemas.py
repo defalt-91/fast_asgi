@@ -1,41 +1,53 @@
 import uuid
-from datetime import datetime, timedelta
-from enum import Enum
-from typing import List, Literal, Optional, Sequence, Union
+import datetime as dt
+import enum
+import typing
+import pydantic.main as py_main
+import services.scopes as scope_service
+import core.base_settings as b_settings
+import pydantic.class_validators as py_validators
+import pydantic.fields as py_fields
+import pydantic.networks as py_net
 
-import pydantic
-from apps.token.models import TokenTypes
-from core.base_settings import settings
-from services.scopes import ScopeTypes
+
+settings = b_settings.get_settings()
 
 
-class Token(pydantic.BaseModel):
+class TokenTypes(str, enum.Enum):
+	ACCESS_TOKEN = "access_token"
+	REFRESH_TOKEN = "refresh_token"
+
+
+class Token(py_main.BaseModel):
 	access_token: str
 	token_type: str
 
 
-class TokenData(pydantic.BaseModel):
-	email: Optional[str] = None
-	username: Optional[str] = None
-	scopes: List[str] = []
-	jti: Optional[str] = None
+class TokenData(py_main.BaseModel):
+	email: typing.Optional[str] = None
+	username: typing.Optional[str] = None
+	scopes: typing.List[str] = []
+	jti: typing.Optional[uuid.UUID] = None
 
 
-class TokenInDBBase(pydantic.BaseModel):
+class TokenInDBBase(py_main.BaseModel):
 	jwt: str
 	user_id: int
 	token_type: TokenTypes
+	expire_at: dt.datetime
 
 
-class TokenInDB(TokenInDBBase):
-	created_at: datetime
+class RefreshTokenInDB(TokenInDBBase):
+	created_at: dt.datetime
+	expire_at: dt.datetime
+	jti: uuid.UUID
 	
 	class Config:
 		orm_mode = True
 
 
-class TokenCreate(TokenInDBBase):
-	pass
+class RefreshTokenCreate(TokenInDBBase):
+	jti: uuid.UUID
 
 
 class TokenUpdate(TokenInDBBase):
@@ -48,34 +60,69 @@ class TokenUpdate(TokenInDBBase):
 # Token.schema(b)
 
 
-class TokenScopesTypes(str, Enum):
+class TokenScopesTypes(str, enum.Enum):
 	ADMIN = "admin"
 	ME = "me"
 	POSTS = "posts"
 
 
-class JwtClaims(pydantic.BaseModel):
+class JwtClaims(py_main.BaseModel):
 	"""model class for creating jwt claims"""
 	
 	# typ
 	sub: str
-	iss: Optional[str] = settings.JWT_ISSUER
-	exp: Optional[timedelta] = None
-	iat: Optional[datetime] = datetime.utcnow()
-	aud: Optional[pydantic.HttpUrl] = pydantic.Field(default_factory=lambda: settings.FRONTEND_ORIGIN)
-	nbf: Optional[int] = None
+	admin: typing.Optional[bool] = None
+	iss: typing.Optional[str] = settings.JWT_ISSUER
+	exp: typing.Optional[dt.timedelta] = None
+	iat: typing.Optional[dt.datetime] = py_fields.Field(
+		default_factory=dt.datetime.utcnow
+	)
+	aud: typing.Optional[py_net.HttpUrl] = py_fields.Field(
+		default_factory=lambda: settings.FRONTEND_ORIGIN
+	)
+	nbf: typing.Optional[int] = None
 
 
-class AccessTokenJwtClaims(JwtClaims):
-	scopes: List[ScopeTypes] = []
-	exp: Optional[timedelta] = pydantic.Field(
-		default_factory=lambda: datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRATION_MINUTES)
+def get_at_exp():
+	return dt.datetime.utcnow() + dt.timedelta(
+		minutes=settings.ACCESS_TOKEN_EXPIRATION_MINUTES
 	)
 
 
-class RefreshTokenJwtClasims(JwtClaims):
-	jti: Optional[str] = None
-# @pydantic.root_validator(pre=True)
-# def create_uuid4(cls, values):
-# 	values['jti'] =str( uuid.uuid4().urn)
-# 	return values
+def get_rt_exp() -> dt.datetime:
+	return dt.datetime.utcnow() + dt.timedelta(
+		days=settings.REFRESH_TOKEN_EXPIRATION_DAYS
+	)
+
+
+class AccessTokenJwtClaims(JwtClaims):
+	scopes: typing.List[scope_service.ScopeTypes] = []
+	exp: dt.datetime = py_fields.Field(default_factory=get_at_exp)
+	
+	@property
+	def exp_timestamp(self):
+		return self.exp.timestamp()
+
+
+class RefreshTokenJwtClaims(JwtClaims):
+	jti: uuid.UUID = py_fields.Field(default_factory=uuid.uuid4)
+	exp: dt.datetime = py_fields.Field(default_factory=get_rt_exp)
+	
+	@property
+	def exp_timestamp(self):
+		return self.exp.timestamp()
+
+
+class AccessRefreshedForResponse(AccessTokenJwtClaims):
+	token_type: str = py_fields.Field(default='bearer')
+	access_token: str
+	expiration_time: typing.Optional[dt.datetime]
+	expiration_timestamp: typing.Optional[dt.datetime]
+	audience: typing.Optional[py_net.HttpUrl]
+	
+	@py_validators.root_validator(pre=True)
+	def set_timestamp(cls, values):
+		values["expiration_time"] = values["exp"]
+		values["audience"] = values["aud"]
+		values["expiration_timestamp"] = values["exp"].strftime('%s')
+		return values

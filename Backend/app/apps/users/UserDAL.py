@@ -1,21 +1,12 @@
 from services.base_dal import BaseDAL
-from . import schemas
 from .models import User
-from sqlalchemy.orm import Session, joinedload, selectinload
-from sqlalchemy import select
-from typing import Any, Dict, List, Optional, Union
-from pydantic import EmailStr
+from . import schemas
+from typing import Optional, Union, Dict, List, Any
+from sqlalchemy.orm.session import Session
 from services.password_service import get_password_hash, verify_password
-from fastapi import Depends
-
-from ..scopes.models import Scope, ScopesEnum, UserScopes
-
-
-# stmt = select(User).join(Address, User.id==Address.user_id)
-# print(stmt)
-
-# stmt = select(User).join(Address, User.addresses)
-# print(stmt)
+from apps.scopes import models
+from sqlalchemy import select
+from pydantic import EmailStr
 
 
 class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
@@ -30,19 +21,14 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 		user.full_name = obj_in.full_name
 		return self.save(session=session, obj=user)
 	
-	def get_multi(
-		self, session: Session, skip: int = 0, limit: int = 10
-	) -> Optional[List[User]]:
+	def get_multi(self, session: Session, skip: int = 0, limit: int = 10) -> Optional[List[User]]:
 		select_statement = select(User).order_by(-User.id)
 		returned_tuple = session.execute(select_statement)
 		row_list = returned_tuple.scalars().all()
 		return row_list
 	
 	def update(
-		self,
-		session: Session,
-		obj_in: Union[schemas.UserUpdate, Dict[str, Any]],
-		session_model: User,
+		self, session: Session, obj_in: Union[schemas.UserUpdate, Dict[str, Any]], session_model: User
 	) -> Optional[User]:
 		if isinstance(obj_in, dict):
 			updated_data = obj_in
@@ -70,16 +56,16 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 	# return super().update(session=session, obj_in=obj_in, session_model=db_obj)
 	
 	def add_user_scope(
-		self, session: Session, user: User, scope: ScopesEnum
+		self, session: Session, user: User, scope: models.ScopesEnum
 	) -> Optional[User]:
-		if scope == ScopesEnum.ADMIN:
-			scope_object = Scope.admin_scope()
-		elif scope == ScopesEnum.POSTS:
-			scope_object = Scope.posts_scope()
-		elif scope == ScopesEnum.ME:
-			scope_object = Scope.me_scope()
+		if scope == models.ScopesEnum.ADMIN:
+			scope_object = models.Scope.admin_scope()
+		elif scope == models.ScopesEnum.POSTS:
+			scope_object = models.Scope.posts_scope()
+		elif scope == models.ScopesEnum.ME:
+			scope_object = models.Scope.me_scope()
 		else:
-			scope_object = Scope()
+			scope_object = models.Scope()
 		user.scopes.append(scope_object)
 		
 		return self.save(session, user)
@@ -95,12 +81,9 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 		existing_user = session.execute(
 			select(self.model)
 				.where(self.model.username == username)
-				# .options(selectinload(self.model.scopes))
+			# .options(selectinload(self.model.scopes))
 		)
 		user = existing_user.scalar_one_or_none()
-		print(existing_user)
-		print(user.username)
-		print(user.scopes)
 		return user
 	
 	def check_username_exist(self, username: str, session: Session):
@@ -119,9 +102,8 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 		self, session: Session, email: EmailStr, raw_password: str
 	):
 		execution = session.execute(
-			select(self.model.email, self.model.hashed_password).where()
+			select(self.model.email, self.model.hashed_password).where(self.model.email == email)
 		)
-		# user = session.get(self.model, self.model.email == email)
 		user: User = execution.scalar_one_or_none()
 		if user:
 			if verify_password(
@@ -151,4 +133,5 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 			return None
 
 
-user_dal: UserDAL = UserDAL(User)
+user_dal = UserDAL(User)
+
