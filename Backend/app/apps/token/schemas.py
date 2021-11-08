@@ -18,16 +18,8 @@ class TokenTypes(str, enum.Enum):
 	REFRESH_TOKEN = "refresh_token"
 
 
-class Token(py_main.BaseModel):
-	access_token: str
-	token_type: str
-
-
-class TokenData(py_main.BaseModel):
-	email: typing.Optional[str] = None
-	username: typing.Optional[str] = None
-	scopes: typing.List[str] = []
-	jti: typing.Optional[uuid.UUID] = None
+class TokenPayload(py_main.BaseModel):
+	sub: typing.Optional[int] = None
 
 
 class TokenInDBBase(py_main.BaseModel):
@@ -122,7 +114,7 @@ class AccessRefreshedForResponse(AccessTokenJwtClaims):
 	
 	@py_validators.root_validator(pre=True)
 	def set_timestamp(cls, values):
-		values["expiration_time"] = values["exp"]
 		values["audience"] = values["aud"]
+		values["expiration_time"] = values["exp"]
 		values["expiration_timestamp"] = values["exp"].strftime('%s')
 		return values

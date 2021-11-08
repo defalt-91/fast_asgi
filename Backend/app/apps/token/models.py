@@ -14,8 +14,10 @@ class Token:
 	expire_at = sql_schema.Column(sql_types.DateTime(timezone=False), nullable=False, index=True)
 	jwt = sql_schema.Column(sql_types.String(455), nullable=True)
 	token_type = sql_schema.Column(sql_types.String(50), nullable=False)
-	user_id = sql_schema.Column(sql_types.Integer, sql_schema.ForeignKey("user.id", ondelete="CASCADE"),
-		nullable=False)
+	user_id = sql_schema.Column(
+		sql_types.Integer, sql_schema.ForeignKey("user.id", ondelete="CASCADE"),
+		nullable=False
+	)
 	user = sql_rel.relationship("User", back_populates="tokens", order_by="desc(Token.created_at)")
 	
 	def __repr__(self):

@@ -1,3 +1,5 @@
+import typing
+
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.engine import create_engine
 from sqlalchemy.ext.asyncio import (
@@ -21,7 +23,7 @@ engine = create_engine(
 async_engine = create_async_engine(
 	url=settings.SQLALCHEMY_ASYNC_DATABASE_URI,
 	pool_pre_ping=True,
-	echo=True,
+	# echo=True,
 	future=True,
 )
 SessionFactory = sessionmaker(
@@ -49,20 +51,38 @@ def get_session() -> Generator:
 		yield session
 	except:
 		session.rollback()
-		raise ConnectionError
-	# else:
-	# 	session.commit()
+		raise
+	else:
+		session.commit()
 	finally:
 		session.close()
 
 
-async def get_async_session() -> Generator:
-	async with AsyncSessionFactory().begin() as async_session:
-		yield async_session
+
+# async def get_async_session() -> Generator:
+# 	async with AsyncSessionFactory() as async_session:
+# 		return async_session
+async def get_async_session() -> typing.Generator:
+	session = AsyncSessionFactory()
+	try:
+		# print(session.connection())
+		# print(session.get_transaction())
+		yield session
+	except:
+		await session.rollback()
+		raise
+	else:
+		print(engine.pool.status())
+		print(engine.pool.status())
+		await session.commit()
+	finally:
+		print(engine.pool.status())
+		print(engine.pool.status())
+		await session.close()
 
 
 def get_scoped_session() -> Generator:
-	with ScopedSessionLocal().begin() as scoped_session:
+	with ScopedSessionLocal() as scoped_session:
 		yield scoped_session
 
 

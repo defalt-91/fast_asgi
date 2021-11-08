@@ -1,6 +1,6 @@
 import typing
 import fastapi as fast
-import jose.exceptions as jose_exc
+
 import pydantic
 
 import apps.users.models as u_models
@@ -45,7 +45,7 @@ async def access_token_from_refresh_token(refresh_token: str, session):
 	try:
 		payload = await security_service.decode_token(refresh_token)
 		username = payload.get('sub', None)
-		user = U_Dal.user_dal.get_user_by_username(username=username, session=session)
+		user = U_Dal.user_dal.authenticate(username=username, session=session)
 		if not user:
 			return None
 		allowed_scopes = await add_user_scopes(user)
@@ -56,20 +56,5 @@ async def access_token_from_refresh_token(refresh_token: str, session):
 		raise fast.HTTPException(
 			status_code=fast.status.HTTP_403_FORBIDDEN,
 			detail="Validation error"
-		)
-	except jose_exc.ExpiredSignatureError:
-		raise fast.HTTPException(
-			status_code=fast.status.HTTP_403_FORBIDDEN,
-			detail="signature has expired, you need to log in again"
-		)
-	except jose_exc.JWTClaimsError:
-		raise fast.HTTPException(
-			status_code=fast.status.HTTP_403_FORBIDDEN,
-			detail="Your token claims is unacceptable"
-		)
-	except jose_exc.JWTError:
-		raise fast.HTTPException(
-			status_code=fast.status.HTTP_403_FORBIDDEN,
-			detail="your credentials are not valid, signature is invalid"
 		)
 	return access_token

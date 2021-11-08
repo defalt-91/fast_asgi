@@ -45,15 +45,15 @@ async def create_superuser_with_superuser(
 	"""Create new user with current super_user"""
 	
 	if user_in.email:
-		conflict_email = user_dal.get_user_by_email(
+		conflict_email = user_dal.check_email_exist(
 			session=session, email=user_in.email
 		)
 		if conflict_email:
 			raise errors.email_exist()
-	conflict_username = user_dal.get_user_by_username(
+	user = user_dal.check_username_exist(
 		session=session, username=user_in.username
 	)
-	if conflict_username:
+	if user:
 		raise errors.username_exist()
 	user_in.is_superuser = True
 	user_in.is_staff = True
@@ -76,15 +76,14 @@ async def update_user_me(
 	current_user: UserModel = Depends(get_current_active_user),
 ) -> UserModel:
 	"""Update own user."""
-	if user_in.email is not None and user_dal.get_user_by_email(
-			session=session, email=user_in.email
-	):
-		raise errors.email_exist()
-	if user_in.username is not None:
-		if user_dal.get_user_by_username(session=session, username=user_in.username):
+	if user_in.email is not None:
+		if user_dal.check_email_exist(session=session, email=user_in.email):
 			raise errors.email_exist()
-	else:
-		user_in.username = current_user.username
+	if user_in.username is not None:
+		if user_dal.check_username_exist(session=session, username=user_in.username):
+			raise errors.email_exist()
+	# else:
+	# 	user_in.username = current_user.username
 	user = user_dal.update(session=session, session_model=current_user, obj_in=user_in)
 	return user
 
@@ -115,7 +114,7 @@ async def create_user_open(
 	if username_exist:
 		raise errors.username_exist()
 	if user_in.email:
-		conflict_email = user_dal.get_user_by_email(
+		conflict_email = user_dal.check_email_exist(
 			session=session, email=user_in.email
 		)
 		if conflict_email:

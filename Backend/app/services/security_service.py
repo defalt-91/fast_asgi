@@ -80,18 +80,12 @@ oauth2_scheme = fast_security.OAuth2PasswordBearer(
 
 def create_access_token(jwt_claims: t_schema.AccessTokenJwtClaims):
 	headers = {"alg": settings.ALGORITHM, "typ": "JWT"}
-	try:
-		jwt_token = jwt.encode(
-			claims=jwt_claims.dict(exclude_none=True),
-			headers=headers,
-			key=settings.SECRET_KEY,
-			algorithm=settings.ALGORITHM,
-		)
-	except j_exc.JWTError:
-		raise fast_exc.HTTPException(
-			detail={"access_token": "error when encoding"},
-			status_code=st_status.HTTP_406_NOT_ACCEPTABLE,
-		)
+	jwt_token = jwt.encode(
+		claims=jwt_claims.dict(exclude_none=True),
+		headers=headers,
+		key=settings.SECRET_KEY,
+		algorithm=settings.ALGORITHM,
+	)
 	for_response = t_schema.AccessRefreshedForResponse(
 		access_token=jwt_token,
 		scopes=jwt_claims.scopes,
@@ -106,19 +100,43 @@ def create_access_token(jwt_claims: t_schema.AccessTokenJwtClaims):
 def create_refresh_token(token_claims: t_schema.RefreshTokenJwtClaims):
 	headers = {"alg": settings.ALGORITHM, "typ": "JWT"}
 	token_claims.jti = str(token_claims.jti)
-	try:
-		refresh_token = jwt.encode(
-			claims=token_claims.dict(exclude_none=True),
-			headers=headers,
-			algorithm=settings.ALGORITHM,
-			key=settings.SECRET_KEY
-		)
-	except(j_exc.JWTError, j_exc.JWTClaimsError):
-		raise fast_exc.HTTPException(
-			detail={"refresh_token": "error when encoding"},
-			status_code=st_status.HTTP_406_NOT_ACCEPTABLE,
-		)
+	refresh_token = jwt.encode(
+		claims=token_claims.dict(exclude_none=True),
+		headers=headers,
+		algorithm=settings.ALGORITHM,
+		key=settings.SECRET_KEY
+	)
+	
 	return refresh_token
+
+
+async def decode_token(token: str):
+	try:
+		token = jwt.decode(
+			token=token,
+			key=settings.SECRET_KEY,
+			algorithms=[settings.ALGORITHM],
+			audience=settings.FRONTEND_ORIGIN,
+			issuer=settings.JWT_ISSUER,
+			# access_token=None,
+			options=Jwt_Options,
+		)
+	except j_exc.ExpiredSignatureError:
+		raise fast_exc.HTTPException(
+			status_code=st_status.HTTP_403_FORBIDDEN,
+			detail="signature has expired, you need to log in again"
+		)
+	except j_exc.JWTClaimsError:
+		raise fast_exc.HTTPException(
+			status_code=st_status.HTTP_403_FORBIDDEN,
+			detail="Your token claims is unacceptable"
+		)
+	except j_exc.JWTError:
+		raise fast_exc.HTTPException(
+			status_code=st_status.HTTP_403_FORBIDDEN,
+			detail="your credentials are not valid, signature is invalid"
+		)
+	return token
 
 
 async def get_current_user(
@@ -127,83 +145,46 @@ async def get_current_user(
 	db: sql_ses.Session = fast_params.Depends(base_ses.get_session),
 ) -> u_models.User:
 	"""Returns Current Authenticated User And Check For Scopes In Token"""
-	if security_scopes.scopes:
-		authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
-	else:
-		authenticate_value = f"Bearer"
-	credentials_exception_need_detail = my_error.credentials_exception_need_detail(
-		authenticate_value=authenticate_value
-	)
-	credentials_exception = credentials_exception_need_detail(
-		details="Could not validate credentials"
-	)
+	authenticate_value = f'Bearer scope="{security_scopes.scope_str}"' if security_scopes.scopes else f"Bearer"
+	credentials_exception_need_detail = my_error.unauthorized_exception(authenticate_value)
+	credentials_exception = credentials_exception_need_detail("Could not validate credentials")
 	try:
 		payload = await decode_token(token)
 		username: str = payload.get("sub")
-		# if username is None:
-		# 	raise credentials_exception
 		token_scopes: typing.Optional[typing.List[typing.Any]] = payload.get("scopes", [])
-		token_data = t_schema.TokenData(
-			scopes=token_scopes, username=username, jti=payload.get("jti")
-		)
+		token_data = t_schema.AccessTokenJwtClaims(**payload, scopes=token_scopes)
 	
 	except pydantic.ValidationError:
 		raise credentials_exception
 	except j_exc.ExpiredSignatureError:
-		raise credentials_exception_need_detail(
-			details="signature has expired, you need to log in again"
-		)
+		raise credentials_exception_need_detail("Token has been expired, you need to log in again")
 	except j_exc.JWTClaimsError:
-		raise credentials_exception_need_detail(
-			details="Your token claims is unacceptable"
-		)
+		raise credentials_exception_need_detail(" Token not valid")
 	except j_exc.JWTError:
-		raise credentials_exception_need_detail(
-			details="your credentials are not valid, signature is invalid"
-		)
+		raise credentials_exception
 	
-	user = U_Dal.user_dal.get_user_by_username(session=db, username=username)
-	if user is None:
-		raise credentials_exception_need_detail(details="No User Found !")
-	# tokens = user.tokens
-	# jti = token_data.jti
+	user = U_Dal.user_dal.authenticate(session=db, username=username)
+	if not user:
+		raise fast_exc.HTTPException(status_code=404, detail="User not found")
+	if "admin" in token_data.scopes:
+		return user
 	for scope in security_scopes.scopes:
-		# if 'admin' in token_data.scopes:
-		# 	return user
-		# elif scope not in token_data.scopes:
-		# 	raise HTTPException(
-		# 		status_code=status.HTTP_401_UNAUTHORIZED,
-		# 		detail="Not enough scopes",
-		# 		headers={"WWW-Authenticate": authenticate_value}
-		# 	)
-		if "admin" not in token_data.scopes and scope not in token_data.scopes:
-			raise credentials_exception_need_detail(
-				details="Not enough permission (scopes)"
-			)
+		if scope not in token_data.scopes:
+			raise credentials_exception_need_detail("Not enough scopes")
 	return user
 
 
 async def get_current_active_user(
-	current_user: u_models.User = fast_params.Security(get_current_user, scopes=["me"])
+	current_user: u_models.User = fast_params.Depends(get_current_user),
 ) -> u_models.User:
-	if not current_user.is_authenticated:
+	if not current_user.is_active:
 		raise my_error.inactive_user()
 	return current_user
 
 
 def get_current_active_superuser(
-	current_user: u_models.User = fast_params.Security(get_current_active_user, scopes=["admin"]),
+	current_user: u_models.User = fast_params.Depends(get_current_active_user),
 ) -> u_models.User:
+	if not current_user.is_superuser:
+		raise my_error.not_superuser()
 	return current_user
-
-
-async def decode_token(token: str):
-	return jwt.decode(
-		token=token,
-		key=settings.SECRET_KEY,
-		algorithms=[settings.ALGORITHM],
-		audience=settings.FRONTEND_ORIGIN,
-		issuer=settings.JWT_ISSUER,
-		# access_token=None,
-		options=Jwt_Options,
-	)

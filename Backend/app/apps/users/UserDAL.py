@@ -70,22 +70,6 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 		
 		return self.save(session, user)
 	
-	def get_user_by_email(
-		self, session: Session, email: Union[str, EmailStr]
-	) -> Optional[User]:
-		statement = select(self.model).where(self.model.email == email)
-		user = session.execute(statement).scalar_one_or_none()
-		return user
-	
-	def get_user_by_username(self, session: Session, username: str) -> Optional[User]:
-		existing_user = session.execute(
-			select(self.model)
-				.where(self.model.username == username)
-			# .options(selectinload(self.model.scopes))
-		)
-		user = existing_user.scalar_one_or_none()
-		return user
-	
 	def check_username_exist(self, username: str, session: Session):
 		statement = select(self.model.username).where(self.model.username == username)
 		existing_username_model = session.execute(statement=statement)
@@ -98,40 +82,27 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 		existing_username = existing_username_object.scalar_one_or_none()
 		return existing_username
 	
-	def authenticate_by_email(
-		self, session: Session, email: EmailStr, raw_password: str
-	):
+	def authenticate_by_email(self, session: Session, email: EmailStr, raw_password: str):
 		execution = session.execute(
 			select(self.model.email, self.model.hashed_password).where(self.model.email == email)
 		)
 		user: User = execution.scalar_one_or_none()
-		if user:
-			if verify_password(
-					plain_password=raw_password, hashed_password=user.hashed_password
-			):
-				return user
-			else:
-				return None
+		if user and verify_password(plain_password=raw_password, hashed_password=user.hashed_password):
+			return user
 		else:
 			return None
 	
-	def authenticate_by_username(
+	def authenticate(
 		self, session: Session, username: str, raw_password: str
 	) -> Optional[Any]:
 		execution = session.execute(
 			select(self.model).where(self.model.username == username)
 		)
 		user = execution.scalar_one_or_none()
-		if user:
-			if verify_password(
-					plain_password=raw_password, hashed_password=user.hashed_password
-			):
-				return user
-			else:
-				return None
+		if user and verify_password(plain_password=raw_password, hashed_password=user.hashed_password):
+			return user
 		else:
 			return None
 
 
 user_dal = UserDAL(User)
-

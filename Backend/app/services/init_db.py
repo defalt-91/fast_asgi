@@ -16,7 +16,7 @@ def init_db(db: Session) -> None:
     # the tables un-commenting the next line
     # Base.metadata.create_all(bind=engine)
 
-    user = user_dal.get_user_by_username(db, username=settings.FIRST_SUPERUSER)
+    user = user_dal.authenticate(db, username=settings.FIRST_SUPERUSER)
     if not user:
         user_in = schemas.UserCreate(
             username=settings.FIRST_SUPERUSER,

@@ -68,10 +68,6 @@ class User(core_reg.NameAndIDMixin):
 		return self.__str__()
 	
 	@property
-	def is_authenticated(self) -> bool:
-		return self.is_active
-	
-	@property
 	def is_admin(self) -> bool:
 		return self.is_superuser
 	

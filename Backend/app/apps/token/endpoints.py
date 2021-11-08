@@ -43,7 +43,7 @@ def recover_password(
 	*, request: st_req.Request, email: py_net.EmailStr = fast_param.Query(...),
 	db: orm_ses.Session = fast_param.Depends(base_ses.get_session), ):
 	"""Password Recovery"""
-	user = user_dal.get_user_by_email(session=db, email=email)
+	user = user_dal.check_email_exist(session=db, email=email)
 	if not user:
 		raise fast_exc.HTTPException(
 			status_code=404,
@@ -85,7 +85,7 @@ async def authorization_server(
 	form_data: fast_oauth.OAuth2PasswordRequestForm = fast_param.Depends(),
 	session: orm_ses.Session = fast_param.Depends(base_ses.get_session),
 ) -> typing.Any:
-	user: typing.Optional[u_models.User] = user_dal.authenticate_by_username(
+	user: typing.Optional[u_models.User] = user_dal.authenticate(
 		session=session, username=form_data.username, raw_password=form_data.password
 	)
 	if not user:
@@ -158,8 +158,17 @@ async def get_new_access_token(
 	return access_token_with_claims
 
 
-@token_router.get("/{user_id}", dependencies=[fast_param.Depends(security_service.get_current_user)])
-async def user_tokens(user_id: int, session: orm_ses.Session = fast_param.Depends(base_ses.get_session), ):
+@token_router.get("/{user_id}")
+async def user_refresh_tokens(
+	user_id: int,
+	current_user: u_models.User = fast_param.Security(security_service.get_current_active_superuser),
+	session: orm_ses.Session = fast_param.Depends(base_ses.get_session)
+):
+	if not current_user.id == user_id:
+		raise fast_exc.HTTPException(
+			status_code=s_status.HTTP_403_FORBIDDEN,
+			detail="You are not authorize to see this user tokens"
+		)
 	token_list = token_dal.get_access_tokens(session=session, user_id=user_id)
 	if not token_list:
 		raise errors.user_have_not_active_token()

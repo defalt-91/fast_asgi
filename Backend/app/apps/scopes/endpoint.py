@@ -17,13 +17,14 @@ scope_api = fast_router.APIRouter()
 @scope_api.get(
 	"/",
 	response_model=typing.List[scope_schemas.ScopeOut],
-	dependencies=[fast_params.Depends(sec_ser.get_current_active_superuser)],
+	dependencies=[fast_params.Depends(sec_ser.get_current_active_user)],
 )
 async def scope_list(
 	session: sql_ses.Session = fast_params.Depends(base_ses.get_session),
 ):
 	"""scope lists with super_user"""
-	return session.execute(sql_select.select(scope_models.Scope)).scalars().all()
+	scopes = session.execute(sql_select.select(scope_models.Scope))
+	return scopes.scalars().all()
 
 
 @scope_api.get(
