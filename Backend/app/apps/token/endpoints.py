@@ -5,6 +5,8 @@ import fastapi.security.oauth2 as fast_oauth
 import fastapi.param_functions as fast_param
 import fastapi.routing as fast_routing
 import pydantic.networks as py_net
+
+from services.scopes import ScopeTypes
 from .TokenDAL import token_dal
 import core.base_settings as base_setting
 import core.database.session as base_ses
@@ -20,6 +22,7 @@ import apps.token.deps as tok_deps
 import starlette.requests as st_req
 import starlette.responses as st_res
 from apps.users.UserDAL import user_dal
+import events.emmiters as emit
 
 
 settings = base_setting.get_settings()
@@ -77,85 +80,46 @@ def reset_password(
 	return {"msg": "Password updated successfully"}
 
 
-@token_router.post("/token")
-@security_service.limiter.limit("5/minutes")
+AccessTokenClaimsFactory = t_schemas.AccessClaimsFactory()
+RefreshTokenClaimsFactory = t_schemas.RefreshClaimsFactory()
+
+
+@token_router.post("/token", response_model=t_schemas.TokenResponse, response_model_exclude_none=True)
+@security_service.limiter.limit("25/minutes")
 async def authorization_server(
 	request: st_req.Request,
-	response: st_res.Response,
-	form_data: fast_oauth.OAuth2PasswordRequestForm = fast_param.Depends(),
-	session: orm_ses.Session = fast_param.Depends(base_ses.get_session),
-) -> typing.Any:
-	user: typing.Optional[u_models.User] = user_dal.authenticate(
-		session=session, username=form_data.username, raw_password=form_data.password
+	access_token_claims: t_schemas.JwtClaims = fast_param.Depends(AccessTokenClaimsFactory),
+	claims_with_refresh_token: tok_deps.RefreshTokenHandler = fast_param.Depends()
+) -> t_schemas.TokenResponse:
+
+	claims_with_access_token = await tok_deps.create_access_token(
+		claims=access_token_claims,
+		sub=claims_with_refresh_token.sub, scopes=claims_with_refresh_token.scopes
 	)
-	if not user:
-		raise errors.incorrect_username_or_password()
-	if not user.is_authenticated:
-		raise errors.inactive_user()
-	
-	allowed_scopes = await tok_deps.add_user_scopes(user=user)
-	# for scope in form_data.scopes:
-	# 	if scope.lower() == 'me':
-	# 		allowed_scopes.append('me')
-	# 	if scope.lower() == 'posts':
-	# 		allowed_scopes.append('posts')
-	access_claims = t_schemas.AccessTokenJwtClaims(
-		sub=user.username, scopes=allowed_scopes
+	# tok_deps.write_Rtoken_cookie(token=updated_claims.token)
+	return t_schemas.TokenResponse(
+		expiration_datetime=claims_with_access_token.exp,
+		access_token=claims_with_access_token.token,
+		refresh_token=t_schemas.RefreshTokenResponse(
+			refresh_token=claims_with_refresh_token.token,
+			expiration_datetime=claims_with_refresh_token.exp
+		)
 	)
-	if user.is_admin:
-		access_claims.admin = True
-	access_token = security_service.create_access_token(access_claims)
-	refresh_claims = t_schemas.RefreshTokenJwtClaims(sub=user.username)
-	refresh_token = security_service.create_refresh_token(token_claims=refresh_claims)
-	response.set_cookie(
-		key="refresh_token",
-		value=f"{refresh_token}",
-		httponly=True,
-		samesite="strict",  # sending just to the site that wrote the cookie
-		secure=False,
-		expires=settings.REFRESH_TOKEN_EXPIRATION_DAYS * 24 * 60 * 60,
-		# domain="myawesomesite.io",  # subdomains are ignored , like api.myawesomesite.io ... just the domain in
-		# needed
-		path="/",
-	)
-	token_dal.create_refresh_token(
-		session=session,
-		refresh_claims=refresh_claims,
-		user_id=user.id,
-		refresh_token=refresh_token,
-	)
-	# tokens = token_dal.get_multi_with_user(session=session, sub=user.id)
-	# for token in tokens:
-	# 	session.delete(token)
-	# session.commit()
-	return {
-		"token_type": "bearer",
-		"access_token": access_token.access_token,
-		"access_token_exp_timestamp": access_claims.exp_timestamp,
-		"access_token_exp_date": access_claims.exp,
-		"refresh_token": {
-			"token_type": "refresh_token",
-			"token": refresh_token,
-			"exp_date": refresh_claims.exp,
-			"exp_timestamp": refresh_claims.exp_timestamp,
-		},
-	}
 
 
 @token_router.post(
 	"/refresh",
 	status_code=s_status.HTTP_200_OK,
-	response_model=t_schemas.AccessRefreshedForResponse,
-	response_model_include={'access_token', 'expiration_time', 'audience', 'token_type', 'expiration_timestamp'}
+	response_model=t_schemas.TokenResponse,
+	response_model_exclude_none=True
 )
 async def get_new_access_token(
-	session: orm_ses.Session = fast_param.Depends(base_ses.get_session),
-	refresh_token: tok_deps.oauth2_refresh_token = fast_param.Depends(),
-) -> typing.Optional[t_schemas.AccessRefreshedForResponse]:
-	access_token_with_claims = await tok_deps.access_token_from_refresh_token(
-		session=session, refresh_token=refresh_token
+	token_claims: t_schemas.JwtClaims = fast_param.Depends(tok_deps.access_token_from_refresh_token)
+) -> t_schemas.TokenResponse:
+	return t_schemas.TokenResponse(
+		access_token=token_claims.token,
+		expiration_datetime=token_claims.exp
 	)
-	return access_token_with_claims
 
 
 @token_router.get("/{user_id}")

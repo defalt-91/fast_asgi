@@ -8,7 +8,7 @@ import core.database.registry as core_reg
 
 
 class utcnow(sql_func.FunctionElement):
-	type = sql_types.DateTime()
+	type = sql_types.TIMESTAMP()
 
 
 @sql_comp.compiles(utcnow, "postgresql")
@@ -24,7 +24,7 @@ class User(core_reg.NameAndIDMixin):
 	hashed_password = sql_schema.Column(sql_types.String(length=255), nullable=False)
 	is_active = sql_schema.Column(sql_types.Boolean(), default=True, nullable=False, index=True)
 	is_superuser = sql_schema.Column(sql_types.Boolean(), default=False, nullable=False, index=True)
-	date_joined = sql_schema.Column(sql_types.DateTime(timezone=True), server_default=utcnow(), index=True)
+	date_joined = sql_schema.Column(sql_types.TIMESTAMP(timezone=True), server_default=utcnow(), index=True)
 	is_staff = sql_schema.Column(sql_types.Boolean, default=False, doc="if true user can login to admin app")
 	profile = sql_rel.relationship(
 		"Profile",

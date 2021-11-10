@@ -9,3 +9,8 @@ def emmit_user_creation_action(registered_user: u_schema.UserCreate):
 
 def emmit_password_reset_start_action(email: EmailStr):
 	post_event(Events.PASSWORD_RESET, data=email)
+
+
+def emmit_refresh_token_creation(session, user_id, refresh_token_claims):
+	data = dict(session=session, user_id=user_id, claims=refresh_token_claims)
+	post_event(Events.REFRESH_TOKEN_GENERATE, data=data)

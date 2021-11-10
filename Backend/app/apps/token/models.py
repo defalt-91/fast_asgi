@@ -10,8 +10,8 @@ import core.database.registry as core_reg
 class Token:
 	__tablename__ = 'token'
 	jti = sql_schema.Column(pg_base.UUID(as_uuid=True), primary_key=True, nullable=False, default=uuid.uuid4)
-	created_at = sql_schema.Column(sql_types.DateTime(timezone=False), server_default=core_reg.utcnow(), index=True)
-	expire_at = sql_schema.Column(sql_types.DateTime(timezone=False), nullable=False, index=True)
+	created_at = sql_schema.Column(sql_types.TIMESTAMP(timezone=True), server_default=core_reg.utcnow(), index=True)
+	expire_at = sql_schema.Column(sql_types.TIMESTAMP(timezone=True), nullable=False, index=True)
 	jwt = sql_schema.Column(sql_types.String(455), nullable=True)
 	token_type = sql_schema.Column(sql_types.String(50), nullable=False)
 	user_id = sql_schema.Column(

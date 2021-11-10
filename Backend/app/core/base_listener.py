@@ -1,4 +1,5 @@
-from apps.users.user_event_listeners import subscribe_to_user_registration
+from apps.users.user_event_listeners import subscribe_to_user_registration, subscribe_to_refresh_creation
 
 
+subscribe_to_refresh_creation()
 subscribe_to_user_registration()

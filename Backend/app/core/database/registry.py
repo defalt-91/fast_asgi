@@ -1,7 +1,7 @@
 from sqlalchemy.orm import registry, declarative_mixin, declared_attr
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.sqltypes import DateTime, Integer
+from sqlalchemy.sql.sqltypes import DateTime, Integer, TIMESTAMP
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.dialects.postgresql import UUID
@@ -10,7 +10,7 @@ from .events import async_engine
 
 
 class utcnow(FunctionElement):
-	type = DateTime()
+	type = TIMESTAMP()
 
 
 @compiles(utcnow, "postgresql")
@@ -47,8 +47,8 @@ class NameAndIDMixin:
 
 @declarative_mixin
 class DateMixin:
-	created_at = Column(DateTime(timezone=False), server_default=utcnow(), index=True)
-	updated_at = Column(DateTime(timezone=False), onupdate=utcnow(), index=True)
+	created_at = Column(TIMESTAMP(timezone=True), server_default=utcnow(), index=True)
+	updated_at = Column(TIMESTAMP(timezone=True), onupdate=utcnow(), index=True)
 
 
 @declarative_mixin

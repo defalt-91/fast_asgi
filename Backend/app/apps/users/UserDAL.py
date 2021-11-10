@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from services.base_dal import BaseDAL
 from .models import User
 from . import schemas
@@ -7,6 +9,8 @@ from services.password_service import get_password_hash, verify_password
 from apps.scopes import models
 from sqlalchemy import select
 from pydantic import EmailStr
+import fastapi.security.oauth2 as f_oauth
+import fastapi.param_functions as f_params
 
 
 class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
@@ -92,17 +96,22 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 		else:
 			return None
 	
-	def authenticate(
-		self, session: Session, username: str, raw_password: str
-	) -> Optional[Any]:
-		execution = session.execute(
-			select(self.model).where(self.model.username == username)
-		)
-		user = execution.scalar_one_or_none()
+	def authenticate(self, session: Session, username: str, raw_password: str) -> User | None:
+		user = self.get_user_by_username(username=username, session=session)
 		if user and verify_password(plain_password=raw_password, hashed_password=user.hashed_password):
 			return user
 		else:
 			return None
+	
+	def get_user_by_username(self, session: Session, username: str):
+		stmt = select(self.model).where(self.model.username == username)
+		db_data = session.execute(stmt)
+		return db_data.scalar_one_or_none()
+	
+	def get_user_by_email(self, session: Session, email: str):
+		stmt = select(self.model).where(self.model.email == email)
+		db_data = session.execute(stmt)
+		return db_data.scalar_one_or_none()
 
 
 user_dal = UserDAL(User)

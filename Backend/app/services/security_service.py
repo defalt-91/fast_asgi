@@ -1,4 +1,6 @@
 import typing
+import uuid
+
 import pydantic
 import sqlalchemy.orm.session as sql_ses
 import core.database.session as base_ses
@@ -17,6 +19,7 @@ import services.errors as my_error
 import services.scopes as sc_src
 import starlette.requests as st_req
 import starlette.status as st_status
+import services.scopes as scope_service
 
 
 settings = b_settings.get_settings()
@@ -78,36 +81,19 @@ oauth2_scheme = fast_security.OAuth2PasswordBearer(
 )
 
 
-def create_access_token(jwt_claims: t_schema.AccessTokenJwtClaims):
+async def create_token(jwt_claims: t_schema.JwtClaims):
 	headers = {"alg": settings.ALGORITHM, "typ": "JWT"}
-	jwt_token = jwt.encode(
+	if jwt_claims.jti is not None:
+		jwt_claims.jti = str(jwt_claims.jti)
+	token = jwt.encode(
 		claims=jwt_claims.dict(exclude_none=True),
 		headers=headers,
 		key=settings.SECRET_KEY,
 		algorithm=settings.ALGORITHM,
 	)
-	for_response = t_schema.AccessRefreshedForResponse(
-		access_token=jwt_token,
-		scopes=jwt_claims.scopes,
-		exp=jwt_claims.exp,
-		sub=jwt_claims.sub,
-		iat=jwt_claims.iat,
-		aud=jwt_claims.aud
-	)
-	return for_response
-
-
-def create_refresh_token(token_claims: t_schema.RefreshTokenJwtClaims):
-	headers = {"alg": settings.ALGORITHM, "typ": "JWT"}
-	token_claims.jti = str(token_claims.jti)
-	refresh_token = jwt.encode(
-		claims=token_claims.dict(exclude_none=True),
-		headers=headers,
-		algorithm=settings.ALGORITHM,
-		key=settings.SECRET_KEY
-	)
-	
-	return refresh_token
+	if jwt_claims.jti is not None:
+		jwt_claims.jti = uuid.UUID(jwt_claims.jti)
+	return token
 
 
 async def decode_token(token: str):
@@ -151,8 +137,7 @@ async def get_current_user(
 	try:
 		payload = await decode_token(token)
 		username: str = payload.get("sub")
-		token_scopes: typing.Optional[typing.List[typing.Any]] = payload.get("scopes", [])
-		token_data = t_schema.AccessTokenJwtClaims(**payload, scopes=token_scopes)
+		token_scopes: typing.Optional[typing.List[scope_service.ScopeTypes]] = payload.get("scopes", [])
 	
 	except pydantic.ValidationError:
 		raise credentials_exception
@@ -163,19 +148,19 @@ async def get_current_user(
 	except j_exc.JWTError:
 		raise credentials_exception
 	
-	user = U_Dal.user_dal.authenticate(session=db, username=username)
-	if not user:
+	user = U_Dal.user_dal.get_user_by_username(session=db, username=username)
+	if user is None:
 		raise fast_exc.HTTPException(status_code=404, detail="User not found")
-	if "admin" in token_data.scopes:
+	if "admin" in token_scopes:
 		return user
 	for scope in security_scopes.scopes:
-		if scope not in token_data.scopes:
+		if scope not in token_scopes:
 			raise credentials_exception_need_detail("Not enough scopes")
 	return user
 
 
 async def get_current_active_user(
-	current_user: u_models.User = fast_params.Depends(get_current_user),
+	current_user: u_models.User = fast_params.Security(get_current_user, scopes=["me"])
 ) -> u_models.User:
 	if not current_user.is_active:
 		raise my_error.inactive_user()

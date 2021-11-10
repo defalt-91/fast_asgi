@@ -21,10 +21,7 @@ settings = get_settings()
 accounts = APIRouter()
 
 
-@accounts.get(
-	"/", response_model=List[User],
-	dependencies=[Depends(get_current_active_superuser)]
-)
+@accounts.get("/", response_model=List[User], dependencies=[Depends(get_current_active_superuser),])
 async def read_users(
 	session: Session = Depends(get_session),
 	pagination: Tuple[int, int] = Depends(paginator),
@@ -35,9 +32,7 @@ async def read_users(
 	return users
 
 
-@accounts.post(
-	"/", response_model=User, dependencies=[Depends(get_current_active_superuser)]
-)
+@accounts.post("/", response_model=User, dependencies=[Depends(get_current_active_superuser)])
 async def create_superuser_with_superuser(
 	user_in: UserCreate,
 	session: Session = Depends(get_session),
@@ -192,5 +187,3 @@ async def profile_picture_test(
 	await image.close()
 	return {"dict"}
 
-
-subscribe_to_user_registration()

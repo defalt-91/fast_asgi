@@ -131,7 +131,7 @@ class Authorization:
 		return self.token_service.create_token(claims_class=claims)
 	
 	def create_refresh_token(
-		self, subject: str,
+		self, subject: str, scopes: Optional[List[Literal["me", "posts", "items", "admin"]]] = None
 	):
 		claims = JWTClaims.refresh_token()
 		return self.token_service.create_token(claims_class=claims)
