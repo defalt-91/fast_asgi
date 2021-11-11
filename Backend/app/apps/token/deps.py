@@ -1,65 +1,25 @@
 import dataclasses
 import typing
-import uuid
-
-import fastapi
-import typing_extensions as ty_ex
-import fastapi.security.oauth2 as f_oauth
 import fastapi as fast
 import jose
-
 import pydantic
-import sqlalchemy.orm
-
-import core.base_settings as b_settings
-
+import sqlalchemy.orm.session as sql_session
+import fastapi.security.oauth2 as f_oauth
 import apps.users.models as u_models
 import apps.scopes.schemas as s_schemas
 import apps.token.schemas as t_schemas
 import services.scopes as scope_service
 import services.security_service as security_service
-from apps.users.UserDAL import user_dal
+import apps.token.protocols as t_proto
 from core.database.session import get_session
-import events.emmiters as emmiters
-from services import errors
-import jose.jwt as jwt
+import services.errors as errors
+from . import components
+import apps.users.UserDAL as UserDAL
+import events.emmiters as emitters
 
 
-Jwt_Options = {
-	"verify_signature": True,
-	"verify_aud": True,
-	"verify_iat": True,
-	"verify_exp": True,
-	"verify_nbf": False,
-	"verify_iss": True,
-	"verify_sub": True,
-	"verify_jti": False,
-	"verify_at_hash": False,
-	"require_aud": True,
-	"require_iat": True,
-	"require_exp": True,
-	"require_nbf": False,
-	"require_iss": True,
-	"require_sub": True,
-	"require_jti": False,
-	"require_at_hash": False,
-	"leeway": 0,
-}
-
-
-class GetRefreshToken:
-	async def __call__(self, request: fast.Request):
-		refresh_token: str = request.cookies.get("refresh_token")
-		if not refresh_token:
-			raise fast.HTTPException(
-				status_code=fast.status.HTTP_401_UNAUTHORIZED,
-				detail="You are not authorize to get a new token, please to go to login page",
-			)
-		return refresh_token
-
-
-oauth2_refresh_token = GetRefreshToken()
-settings = b_settings.get_settings()
+oauth2_refresh_token_reader = components.GetRefreshToken(cookie_name='refresh_token')
+oauth2_refresh_token_writer = components.WriteRefreshTokenCookie(cookie_name="refresh_token")
 
 AccessTokenClaimsFactory = t_schemas.AccessClaimsFactory()
 RefreshTokenClaimsFactory = t_schemas.RefreshClaimsFactory()
@@ -82,8 +42,7 @@ async def add_user_scopes(user: u_models.User) -> typing.List[scope_service.Scop
 
 async def create_refresh_token(user: u_models.User, claims: t_schemas.JwtClaims) -> t_schemas.JwtClaims:
 	try:
-		scopes = await add_user_scopes(user=user)
-		claims.scopes = scopes
+		claims.scopes = await add_user_scopes(user=user)
 		claims.sub = user.username
 		claims.token = await security_service.create_token(jwt_claims=claims)
 	
@@ -113,7 +72,7 @@ async def create_access_token(
 
 
 async def access_token_from_refresh_token(
-	refresh_token: oauth2_refresh_token = fast.Depends(),
+	refresh_token: oauth2_refresh_token_reader = fast.Depends(),
 	claims: t_schemas.JwtClaims = fast.Depends(AccessTokenClaimsFactory)
 ) -> t_schemas.JwtClaims:
 	try:
@@ -130,114 +89,47 @@ async def access_token_from_refresh_token(
 	return claims
 
 
-class CookieWriter(typing.Protocol):
-	cookie_name: str
-	""" cookie name must be past as class initializer parameter """
-	
-	def __call__(self, value: str, response: fastapi.Response) -> None:
-		...
-		""" this method writes the cookie"""
+# jwt_service = components.JWTService(jwt_verifier=verifier, jwt_creator=creator)
+# Authorizer: t_proto.JWTAuthorizerProtocol = components.JWTAuthorizer(
+# 	jwt_service=jwt_service, cookie_writer=oauth2_refresh_token_writer
+# )
 
-
-@dataclasses.dataclass(frozen=True)
-class RefreshTokenCookieWriter:
-	cookie_name: str
-	
-	def __call__(self, value: str, response: fast.Response):
-		response.set_cookie(
-			key=self.cookie_name, value=value, httponly=True, path="/", secure=False,
-			samesite="strict",  # sending just to the site that wrote the cookie
-			expires=settings.REFRESH_TOKEN_EXPIRATION_DAYS * 24 * 60 * 60,
-			# domain="myawesomesite.io",  # subdomains are ignored , like api.myawesomesite.io ... just the domain is
-			# needed
-		)
-
-
-class BaseJwtService(typing.Protocol):
-	headers: dict
-	
-	def create_jwt(self, claims: t_schemas.JwtClaims, user: u_models.User, jti: bool) -> t_schemas.JwtClaims:
-		""" for creating jwt tokens """
-	
-	def verify_jwt(self, token: str) -> dict:
-		""" for verifying signature of jwt """
-
-
-class JWTService:
-	def __init__(self):
-		self.headers = {"alg": settings.ALGORITHM, "typ": "JWT"}
-		self.secret_key = settings.SECRET_KEY
-		self.algorithm = settings.ALGORITHM
-		self.issuer = settings.ISSUER
-		self.audience = settings.FRONTEND_ORIGIN
-		self.options = Jwt_Options
-	
-	def create_jwt(self, claims: t_schemas.JwtClaims, jti: bool = False):
-		try:
-			if jti:
-				claims.jti = str(claims.jti)
-			claims.token = jwt.encode(
-				claims=claims.dict(exclude_none=True), key=self.secret_key, algorithm=self.algorithm,
-				headers=self.headers
-			)
-			claims.jti = uuid.UUID(claims.jti)
-			return claims
-		except(pydantic.ValidationError, jwt.JWTError):
-			raise fast.HTTPException(status_code=fast.status.HTTP_403_FORBIDDEN, detail="jwt didnt created")
-	
-	def verify_jwt(self, token):
-		try:
-			token = jwt.decode(
-				token=token, key=self.secret_key, algorithms=[self.algorithm], issuer=self.issuer,
-				audience=self.audience, options=self.options
-			)
-			return token
-		except jwt.ExpiredSignatureError:
-			raise fast.HTTPException(
-				status_code=fast.status.HTTP_403_FORBIDDEN,
-				detail="signature has expired, you need to log in again"
-			)
-		except jwt.JWTClaimsError:
-			raise fast.HTTPException(
-				status_code=fast.status.HTTP_403_FORBIDDEN,
-				detail="Your token claims is unacceptable"
-			)
-		except jwt.JWTError:
-			raise fast.HTTPException(
-				status_code=fast.status.HTTP_403_FORBIDDEN,
-				detail="your credentials are not valid, signature is invalid"
-			)
-
-
-class TokenCreator:
-	def __init__(self, cookie_writer: CookieWriter,
-		# jwt_service: BaseJwtService
-	):
+class LoginHandler:
+	def __init__(self, cookie_writer, token_creator):
 		self.cookie_writer = cookie_writer
-		# self.jwt_service = jwt_service
+		self.token_creator = token_creator
 	
 	async def __call__(
-		self,
-		response: fastapi.Response,
-		session: sqlalchemy.orm.Session = fast.Depends(get_session),
+		self, *, response: fast.Response,
 		form_data: f_oauth.OAuth2PasswordRequestForm = fast.Depends(),
-		refresh_token_claims: t_schemas.JwtClaims = fast.Depends(RefreshTokenClaimsFactory),
+		session: sql_session.Session = fast.Depends(get_session),
+		refresh_token_jwt_claims: t_schemas.JwtClaims = fast.Depends(RefreshTokenClaimsFactory),
+		access_token_jwt_claims: t_schemas.JwtClaims = fast.Depends(AccessTokenClaimsFactory),
 	):
-		user = user_dal.authenticate(session=session, username=form_data.username, raw_password=form_data.password)
+		user = UserDAL.user_dal.authenticate(
+			username=form_data.username, raw_password=form_data.password, session=session
+		)
 		if not user:
 			raise errors.incorrect_username_or_password()
 		if not user.is_active:
 			raise errors.inactive_user()
+		refresh_token_jwt_claims.sub = user.username
+		refresh_token_jwt_claims.scopes = [scope.code for scope in user.scopes]
 		
-		claims_with_refresh_token = await create_refresh_token(claims=refresh_token_claims, user=user)
-		
-		emmiters.emmit_refresh_token_creation(
-			session=session, user_id=user.id,
-			refresh_token_claims=claims_with_refresh_token
+		refresh_token_jwt_claims.token = self.token_creator(
+			claims=refresh_token_jwt_claims,
+			token_type="refresh_token"
 		)
-		self.cookie_writer(value=claims_with_refresh_token.token, response=response)
-		return claims_with_refresh_token
+		access_token_jwt_claims.sub = user.username
+		access_token_jwt_claims.scopes = refresh_token_jwt_claims.scopes
+		access_token_jwt_claims.token = self.token_creator(claims=access_token_jwt_claims)
+		self.cookie_writer(cookie_value=refresh_token_jwt_claims.token, response=response)
+		emitters.emmit_refresh_token_creation(
+			session=session, refresh_token_claims=refresh_token_jwt_claims, user_id=user.id
+		)
+		return access_token_jwt_claims
 
 
-RefreshTokenCookieHandler = RefreshTokenCookieWriter(cookie_name='refresh_token')
-RefreshTokenHandler = TokenCreator(cookie_writer=RefreshTokenCookieHandler)
+verifier = components.JWTVerifier()
+creator = components.JWTCreator()
+login_handler = LoginHandler(cookie_writer=oauth2_refresh_token_writer, token_creator=creator)

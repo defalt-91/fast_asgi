@@ -5,7 +5,6 @@ import typing
 import pydantic.main as py_main
 import services.scopes as scope_service
 import core.base_settings as b_settings
-import pydantic.class_validators as py_validators
 import pydantic.fields as py_fields
 import pydantic.networks as py_net
 import pydantic.types as py_types
@@ -49,22 +48,6 @@ class RefreshTokenCreate(TokenInDBBase):
 
 class TokenUpdate(TokenInDBBase):
 	pass
-#
-#
-# class JWTProtocol(typing.Protocol):
-# 	"""Protocol for creating jwt claims """
-# 	"""     (for decoupling dependencies)       """
-#
-# 	sub: typing.Optional[str] = None
-# 	scopes: typing.Optional[list[scope_service.ScopeTypes]] = None
-# 	iss: str = settings.JWT_ISSUER
-# 	exp: typing.Optional[dt.datetime] = None
-# 	iat: dt.datetime = py_fields.Field(default_factory=datetime_aware)
-# 	aud: py_net.HttpUrl = py_fields.Field(default_factory=lambda: settings.FRONTEND_ORIGIN)
-# 	nbf: typing.Optional[int] = None
-# 	token: typing.Optional[str] = None
-# 	jti: typing.Optional[py_types.UUID4] = None
-# 	token_type: typing.Optional[TokenTypes] = None
 
 
 class JwtClaims(py_main.BaseModel):

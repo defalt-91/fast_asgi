@@ -85,25 +85,14 @@ RefreshTokenClaimsFactory = t_schemas.RefreshClaimsFactory()
 
 
 @token_router.post("/token", response_model=t_schemas.TokenResponse, response_model_exclude_none=True)
-@security_service.limiter.limit("25/minutes")
+@security_service.limiter.limit("125/minutes")
 async def authorization_server(
 	request: st_req.Request,
-	access_token_claims: t_schemas.JwtClaims = fast_param.Depends(AccessTokenClaimsFactory),
-	claims_with_refresh_token: tok_deps.RefreshTokenHandler = fast_param.Depends()
+	claims_with_access_token: t_schemas.JwtClaims = fast_param.Depends(tok_deps.login_handler)
 ) -> t_schemas.TokenResponse:
-
-	claims_with_access_token = await tok_deps.create_access_token(
-		claims=access_token_claims,
-		sub=claims_with_refresh_token.sub, scopes=claims_with_refresh_token.scopes
-	)
-	# tok_deps.write_Rtoken_cookie(token=updated_claims.token)
 	return t_schemas.TokenResponse(
 		expiration_datetime=claims_with_access_token.exp,
 		access_token=claims_with_access_token.token,
-		refresh_token=t_schemas.RefreshTokenResponse(
-			refresh_token=claims_with_refresh_token.token,
-			expiration_datetime=claims_with_refresh_token.exp
-		)
 	)
 
 
