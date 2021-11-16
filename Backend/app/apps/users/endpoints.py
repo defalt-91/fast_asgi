@@ -1,19 +1,17 @@
 from fastapi import APIRouter, Depends, Request, Response, Query, File, UploadFile
 from PIL import Image
-from typing import List, Optional, Any, Tuple
+from typing import List, Any, Tuple
 from core.database.session import get_session
 from .schemas import UserCreate, User, UserUpdate
-from services.security_service import get_current_active_user, get_current_active_superuser, get_current_user
 from services.paginator import paginator
 from sqlalchemy.orm.session import Session
 from services import errors
 from .models import User as UserModel
 from .UserDAL import user_dal
-from apps.scopes.models import Scope, ScopesEnum, UserScopes
+from apps.scopes.models import ScopesEnum
 from core.base_settings import get_settings
-from events.emmiters import emmit_user_creation_action, emmit_password_reset_start_action, post_event
-from events.events import subscribe, post_event
-from .user_event_listeners import subscribe_to_user_registration
+from events.emmiters import emmit_user_creation_action
+from apps.components import current_active_user, current_active_superuser
 
 
 settings = get_settings()
@@ -21,7 +19,7 @@ settings = get_settings()
 accounts = APIRouter()
 
 
-@accounts.get("/", response_model=List[User], dependencies=[Depends(get_current_active_superuser),])
+@accounts.get("/", response_model=List[User], dependencies=[Depends(current_active_superuser), ])
 async def read_users(
 	session: Session = Depends(get_session),
 	pagination: Tuple[int, int] = Depends(paginator),
@@ -32,7 +30,7 @@ async def read_users(
 	return users
 
 
-@accounts.post("/", response_model=User, dependencies=[Depends(get_current_active_superuser)])
+@accounts.post("/", response_model=User, dependencies=[Depends(current_active_superuser)])
 async def create_superuser_with_superuser(
 	user_in: UserCreate,
 	session: Session = Depends(get_session),
@@ -68,7 +66,7 @@ async def update_user_me(
 	*,
 	user_in: UserUpdate,
 	session: Session = Depends(get_session),
-	current_user: UserModel = Depends(get_current_active_user),
+	current_user: UserModel = Depends(current_active_user),
 ) -> UserModel:
 	"""Update own user."""
 	if user_in.email is not None:
@@ -85,7 +83,7 @@ async def update_user_me(
 
 @accounts.get("/me", response_model=User)
 async def read_user_me(
-	current_user: UserModel = Depends(get_current_active_user),
+	current_user: UserModel = Depends(current_active_user),
 ) -> Any:
 	"""Get current user."""
 	return current_user
@@ -130,7 +128,7 @@ async def create_user_open(
 async def read_user_by_id(
 	*,
 	session: Session = Depends(get_session),
-	current_user: UserModel = Depends(get_current_active_user),
+	current_user: UserModel = Depends(current_active_user),
 	user_id: int = Query(...),
 ) -> Any:
 	"""Get a specific user by id."""
@@ -143,7 +141,7 @@ async def read_user_by_id(
 	return user
 
 
-@accounts.put("/{user_id}", response_model=User, dependencies=[Depends(get_current_active_superuser)])
+@accounts.put("/{user_id}", response_model=User, dependencies=[Depends(current_active_superuser)])
 async def update_user_by_id(
 	*,
 	session: Session = Depends(get_session),
@@ -156,7 +154,7 @@ async def update_user_by_id(
 	return user
 
 
-@accounts.patch("/{user_id}", response_model=User, dependencies=[Depends(get_current_active_superuser)])
+@accounts.patch("/{user_id}", response_model=User, dependencies=[Depends(current_active_superuser)])
 def deactivate_user_by_id(
 	user_id: int,
 	session: Session = Depends(get_session)
@@ -186,4 +184,3 @@ async def profile_picture_test(
 	opened_img.close()
 	await image.close()
 	return {"dict"}
-

@@ -11,7 +11,6 @@ from apps.scopes.endpoint import scope_api
 from fastapi import Request, Response
 
 
-
 class TimedRoute(APIRoute):
 	def get_route_handler(self) -> Callable:
 		original_route_handler = super().get_route_handler()
@@ -21,9 +20,6 @@ class TimedRoute(APIRoute):
 			response: Response = await original_route_handler(request)
 			duration = time.time() - before
 			response.headers["X-Response-Time"] = str(duration)
-			print(f"route duration: {duration}")
-			print(f"route response: {response}")
-			print(f"route response headers: {response.headers}")
 			return response
 		
 		return custom_route_handler
@@ -40,13 +36,9 @@ api_router.include_router(
 
 api_router.include_router(
 	router=accounts,
-	prefix="/users",
+	prefix="/accounts",
 	tags=["Authentication Server"],
 	include_in_schema=True,
-)
-
-api_router.include_router(
-	router=post_router, prefix="/posts", include_in_schema=True, tags=["posts apis"]
 )
 
 api_router.include_router(
@@ -57,3 +49,6 @@ api_router.include_router(
 )
 api_router.include_router(oauth_provider_router, tags=["Oauth2 providers"])
 
+api_router.include_router(
+	router=post_router, prefix="/posts", include_in_schema=True, tags=["posts apis"]
+)

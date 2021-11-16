@@ -26,9 +26,12 @@ def registered_user(user: u_schemas.UserCreate):
 #     email_to=user.email, username=user.username, password=user.hashed_password
 # )
 def refresh_save_to_db(data):
-	print(data)
 	t_d.token_dal.create_refresh_token(
-		session=data["session"], user_id=data["user_id"], refresh_claims=data["claims"],
+		session=data["session"],
+		user_id=data["user_id"],
+		expire_at=data["expire_at"],
+		jwt=data["jwt"],
+		jti=data["jti"]
 	)
 
 

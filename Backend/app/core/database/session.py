@@ -58,6 +58,21 @@ def get_session() -> Generator:
 		session.close()
 
 
+class SessionContextManager:
+	def __init__(self):
+		self.session = SessionFactory()
+	
+	def __enter__(self):
+		return self.session
+	
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		self.session.close()
+
+
+async def test_ctx():
+	with SessionContextManager() as session:
+		yield session
+
 
 # async def get_async_session() -> Generator:
 # 	async with AsyncSessionFactory() as async_session:

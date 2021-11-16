@@ -103,7 +103,7 @@ class UserDAL(BaseDAL[User, schemas.UserCreate, schemas.UserUpdate]):
 		else:
 			return None
 	
-	def get_user_by_username(self, session: Session, username: str):
+	def get_user_by_username(self, session: Session, username: str)->User:
 		stmt = select(self.model).where(self.model.username == username)
 		db_data = session.execute(stmt)
 		return db_data.scalar_one_or_none()

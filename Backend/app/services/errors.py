@@ -67,9 +67,7 @@ def incorrect_username_or_password():
 
 @lru_cache
 def inactive_user():
-	return HTTPException(
-		status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user"
-	)
+	return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
 
 
 @lru_cache

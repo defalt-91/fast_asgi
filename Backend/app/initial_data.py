@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def init() -> None:
-	with SessionFactory().begin() as session:
+	with SessionFactory() as session:
 		init_db(session)
 
 

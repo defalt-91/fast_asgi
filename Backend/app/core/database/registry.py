@@ -6,7 +6,7 @@ from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.dialects.postgresql import UUID
 
-from .events import async_engine
+# from .events import async_engine
 
 
 class utcnow(FunctionElement):

@@ -13,10 +13,9 @@ class Token:
 	created_at = sql_schema.Column(sql_types.TIMESTAMP(timezone=True), server_default=core_reg.utcnow(), index=True)
 	expire_at = sql_schema.Column(sql_types.TIMESTAMP(timezone=True), nullable=False, index=True)
 	jwt = sql_schema.Column(sql_types.String(455), nullable=True)
-	token_type = sql_schema.Column(sql_types.String(50), nullable=False)
+	revoked = sql_schema.Column(sql_types.Boolean(), nullable=True)
 	user_id = sql_schema.Column(
-		sql_types.Integer, sql_schema.ForeignKey("user.id", ondelete="CASCADE"),
-		nullable=False
+		sql_types.Integer(), sql_schema.ForeignKey("user.id", ondelete="CASCADE"), nullable=False
 	)
 	user = sql_rel.relationship("User", back_populates="tokens", order_by="desc(Token.created_at)")
 	

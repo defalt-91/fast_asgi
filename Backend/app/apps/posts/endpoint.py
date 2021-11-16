@@ -7,7 +7,6 @@ import starlette.status as st_s
 import core.database.session as sess
 import services.errors as my_err
 import services.paginator as pg
-import services.security_service as s_s
 import apps.posts.PostDAL as PostDAL
 import apps.posts.model as model
 import apps.posts.schema as schema
@@ -15,7 +14,7 @@ import apps.posts.schema as schema
 import apps.users.permissions as u_perms
 import apps.users.schemas as u_schema
 import apps.users.models as u_model
-
+import apps.components as components
 
 post_router = fr.APIRouter()
 
@@ -24,7 +23,7 @@ post_router = fr.APIRouter()
     "/", status_code=st_s.HTTP_200_OK, response_model=typing.List[schema.PostList]
 )
 async def post_list(
-    current_user=fp.Security(s_s.get_current_active_user, scopes=["posts"]),
+    current_user=fp.Security(components.current_active_user, scopes=["posts"]),
     pagination: typing.Tuple[int, int] = fp.Depends(pg.paginator),
     session: sql_sess.Session = fp.Depends(sess.get_session),
 ):
@@ -42,14 +41,12 @@ async def post_list(
     return posts
 
 
-@post_router.post(
-    "/", status_code=st_s.HTTP_201_CREATED, response_model=schema.PostDetail
-)
+@post_router.post("/", status_code=st_s.HTTP_201_CREATED, response_model=schema.PostDetail)
 async def post_create(
     *,
+    post_in:schema.PostCreate,
     session: sql_sess.Session = fp.Depends(sess.get_session),
-    post_in=fp.Depends(schema.PostCreate),
-    current_user=fp.Security(s_s.get_current_active_user, scopes=["posts"]),
+    current_user=fp.Security(components.current_active_user, scopes=["posts"]),
 ):
     if "admin" in str(current_user.scopes) and post_in.author_id:
         author_id: int = post_in.author_id
@@ -70,7 +67,7 @@ async def post_create(
     "/{post_id}",
     status_code=st_s.HTTP_200_OK,
     response_model=schema.PostDetail,
-    dependencies=[fp.Security(s_s.get_current_active_user, scopes=["posts"])],
+    dependencies=[fp.Security(components.current_active_user, scopes=["posts"])],
 )
 async def post_detail(
     *,
@@ -94,7 +91,7 @@ async def post_update(
     obj_in: schema.PostUpdate,
     session: sql_sess.Session = fp.Depends(sess.get_session),
     current_user: u_model.User = fp.Security(
-        s_s.get_current_active_user, scopes=["posts"]
+        components.current_active_user, scopes=["posts"]
     ),
 ):
     db_obj: model.Post = PostDAL.post_dal.get_object_or_404(
@@ -118,7 +115,7 @@ async def post_update(
 async def post_delete(
     *,
     post_id: int,
-    current_user=fp.Security(s_s.get_current_active_user, scopes=["posts"]),
+    current_user=fp.Security(components.current_active_user, scopes=["posts"]),
     session: sql_sess.Session = fp.Depends(sess.get_session),
 ):
     instance = PostDAL.post_dal.get_object_or_404(instance_id=post_id, session=session)

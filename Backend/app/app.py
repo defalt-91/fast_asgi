@@ -1,10 +1,9 @@
-from core.base_router import api_router
+from apps.base_router import api_router
 from core.base_settings import settings
 from fastapi import FastAPI, responses
 from fastapi.middleware import cors, gzip, trustedhost
 from slowapi.errors import RateLimitExceeded
 from services.exception_services import rate_limit_exceeded_handler
-from services.security_service import limiter
 from slowapi.middleware import SlowAPIMiddleware
 
 from starlette.middleware.sessions import SessionMiddleware
@@ -12,6 +11,7 @@ from timing_asgi import TimingMiddleware, TimingClient
 from timing_asgi.integrations import StarletteScopeToName
 from starlette_prometheus import metrics, PrometheusMiddleware
 from fastapi.staticfiles import StaticFiles
+from apps.components import limiter
 
 
 # from starlette_csrf import CSRFMiddleware
@@ -52,8 +52,9 @@ app.add_middleware(
 # 	# for triggering the csrf check when detecting this cookie in safe methods
 # 	sensitive_cookies=settings.TOKEN_SENSITIVE_COOKIES,
 # 	cookie_domain=settings.FRONTEND_DOMAIN,
-# 	header_name=settings.CSRF_TOKEN_HEADER_NAME,
+# 	header_name=settings.CSRF_TOKEN_HEADER_NAME
 # )
+
 app.add_middleware(gzip.GZipMiddleware, minimum_size=1000)
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(SessionMiddleware, secret_key="!secret")
@@ -70,7 +71,7 @@ class PrintTimings(TimingClient):
 app.add_middleware(
 	TimingMiddleware,
 	client=PrintTimings(),
-	metric_namer=StarletteScopeToName(prefix="myapp", starlette_app=app),
+	metric_namer=StarletteScopeToName(prefix="asgi", starlette_app=app),
 )
 # app.add_middleware(PrometheusMiddleware)
 
