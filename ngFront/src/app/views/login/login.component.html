@@ -1,0 +1,49 @@
+<div class="wrapper">
+  <form [formGroup]="form" (ngSubmit)="login()" class="form">
+    <h2>Credentials</h2>
+    <mat-form-field appearance="outline" [@inputP]="username.value.length===0?'nist':'hast'">
+      <mat-label for="username">Username:</mat-label>
+      <input
+        matInput
+        type="text"
+        autocomplete="on"
+        formControlName="username"
+        name="username"
+      />
+      <mat-error *ngIf="username.hasError('required')">
+        Username is required
+      </mat-error>
+      <mat-hint align="end"><strong>Please enter your username</strong>
+      </mat-hint>
+      <mat-error *ngIf="username.hasError('minlength')"
+      >Username is to short
+      </mat-error>
+    </mat-form-field>
+    <!-- <mat-divider></mat-divider> -->
+
+    <mat-form-field appearance="outline" [@inputP]="password.value.length!==0?'hast':'nist'">
+      <mat-label for="password">Password</mat-label>
+
+      <input matInput
+             type="password"
+             name="password"
+             formControlName="password"
+             autocomplete="on"/>
+      <mat-error *ngIf="password.errors?.required">
+        Password is required
+      </mat-error>
+      <mat-error *ngIf="password.hasError('minlength')"
+      >your password needs to be more than 8 characters
+      </mat-error>
+      <mat-hint align="end">Your password</mat-hint>
+    </mat-form-field>
+    <mat-divider [inset]="false"></mat-divider>
+    <button mat-raised-button
+            color="warn"
+            [disabled]="form.invalid"
+            type="submit"
+            class="btn">
+      login
+    </button>
+  </form>
+</div>

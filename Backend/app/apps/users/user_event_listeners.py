@@ -2,12 +2,7 @@ import events.events as ev
 import apps.users.models as u_models
 import logging
 import apps.users.schemas as u_schemas
-import apps.token.schemas as t_schema
-import fastapi.param_functions as fast_params
-import core.database.session as core_session
-import sqlalchemy.orm.session as sql_session
-
-import apps.token.TokenDAL as t_d
+import apps.token.TokenDAL as tokenDal
 
 
 logging.basicConfig(level=logging.INFO)
@@ -26,7 +21,7 @@ def registered_user(user: u_schemas.UserCreate):
 #     email_to=user.email, username=user.username, password=user.hashed_password
 # )
 def refresh_save_to_db(data):
-	t_d.token_dal.create_refresh_token(
+	tokenDal.token_dal.create_refresh_token(
 		session=data["session"],
 		user_id=data["user_id"],
 		expire_at=data["expire_at"],

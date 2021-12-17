@@ -13,12 +13,8 @@ import sqlalchemy.orm.session as sql_ses
 import sqlalchemy.exc as sql_exc
 
 
-class PostDal(
-    base_dal.BaseDAL[Post, schema.PostUpdate, schema.PostCreate]
-):
-    def get_object_with_relations_or_404(
-        self, session: sql_ses.Session, instance_id: int
-    ) -> typing.Optional[Post]:
+class PostDal(base_dal.BaseDAL[Post, schema.PostUpdate, schema.PostCreate]):
+    def get_object_with_relations_or_404(self, session: sql_ses.Session, instance_id: int) -> typing.Optional[Post]:
         try:
             query = session.execute(
                 sql_sel.select(self.model)

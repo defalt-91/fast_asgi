@@ -16,7 +16,7 @@ from apps.components import limiter
 
 # from starlette_csrf import CSRFMiddleware
 # from events import observer
-some_file_path = "/home/defalt91/User_Authentication.mkv"
+
 app = FastAPI(
 	debug=settings.DEBUG,
 	title=settings.PROJECT_NAME,
@@ -57,9 +57,9 @@ app.add_middleware(
 
 app.add_middleware(gzip.GZipMiddleware, minimum_size=1000)
 app.add_middleware(SlowAPIMiddleware)
-app.add_middleware(SessionMiddleware, secret_key="!secret")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+app.add_middleware(SessionMiddleware, secret_key="!secret")
 app.add_route("/metrics/", metrics)
 
 
@@ -97,9 +97,7 @@ async def shutdown():
 	print("Shutdown")
 
 
-@app.get("/")
-async def home():
-	return {"hello": "world"}
+some_file_path = "/home/defalt91/User_Authentication.mkv"
 
 
 # asynchronous

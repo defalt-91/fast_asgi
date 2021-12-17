@@ -1,1 +1,246 @@
-/* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
+@use './src/app/components/carousel/carousel-theme' as carousel;
+@use "sass:map";
+
+@include mat.core();
+
+
+//Light colors
+$light-primary: mat.define-palette(mat.$indigo-palette, 500, 100, 900);
+$light-accent: mat.define-palette(mat.$pink-palette, 500, 100, 900);
+$light-warn: mat.define-palette(mat.$red-palette);
+
+//Light theme
+$light-theme: mat.define-light-theme(
+                (color: (primary: $light-primary, accent: $light-accent, warn: $light-warn,),));
+//Dark colors
+$dark-primary: mat.define-palette(mat.$blue-grey-palette);
+$dark-accent: mat.define-palette(mat.$deep-orange-palette, A100);
+$dark-warn: mat.define-palette(mat.$yellow-palette, A400);
+
+//Dark theme
+$dark-theme: mat.define-dark-theme((
+        color: (primary: $dark-primary, accent: $dark-accent, warn: $dark-warn,),
+        typography:mat.define-typography-config(
+                $font-family: serif,))
+);
+
+//Specific components theme 'as color as typography'
+@include mat.core-theme($light-theme);
+@include mat.button-theme($light-theme);
+@include mat.snack-bar-theme($light-theme);
+@include mat.sidenav-theme($light-theme);
+@include mat.select-theme($light-theme);
+@include mat.toolbar-theme($light-theme);
+@include mat.icon-theme($light-theme);
+@include mat.list-theme($light-theme);
+@include mat.form-field-theme($light-theme);
+@include mat.progress-bar-theme($light-theme);
+@include mat.input-theme($light-theme);
+@include mat.divider-theme($light-theme);
+@include mat.menu-theme($light-theme);
+@include mat.progress-spinner-theme($light-theme);
+@include mat.tooltip-theme($light-theme);
+
+
+.dark-theme {
+  @include mat.core-color($dark-theme);
+  @include mat.tooltip-color($dark-theme);
+  @include mat.button-color($dark-theme);
+  @include mat.sidenav-color($dark-theme);
+  @include mat.select-color($dark-theme);
+  @include mat.toolbar-color($dark-theme);
+  @include mat.icon-color($dark-theme);
+  @include mat.list-color($dark-theme);
+  @include mat.form-field-color($dark-theme);
+  @include mat.progress-bar-color($dark-theme);
+  @include mat.input-color($dark-theme);
+  @include mat.divider-color($dark-theme);
+  @include mat.snack-bar-color($dark-theme);
+  @include mat.menu-color($dark-theme);
+  @include mat.progress-spinner-color($dark-theme);
+  //@include mat.all-component-typographies($dark-theme);
+
+}
+
+//Light Theme Colors
+$Light_colorConfig: mat.get-color-config($light-theme);
+$Light_primary-palette: map.get($Light_colorConfig, 'primary');
+$Light_accent-palette: map.get($Light_colorConfig, 'accent');
+$Light_warn-palette: map.get($Light_colorConfig, 'warn');
+
+//Dark Theme Colors
+$Dark_colorConfig: mat.get-color-config($dark-theme);
+$Dark_primary-palette: map.get($Dark_colorConfig, 'primary');
+$Dark_accent-palette: map.get($Dark_colorConfig, 'accent');
+$Dark_warn-palette: map.get($Dark_colorConfig, 'warn');
+
+//map of Light primary colors
+$Light_primary-100: mat.get-color-from-palette($Light_primary-palette, 100);
+$Light_primary-200: mat.get-color-from-palette($Light_primary-palette, 200);
+$Light_primary-300: mat.get-color-from-palette($Light_primary-palette, 300);
+$Light_primary-400: mat.get-color-from-palette($Light_primary-palette, 400);
+$Light_primary-500: mat.get-color-from-palette($Light_primary-palette, 500);
+$Light_primary-600: mat.get-color-from-palette($Light_primary-palette, 600);
+$Light_primary-700: mat.get-color-from-palette($Light_primary-palette, 700);
+$Light_primary-800: mat.get-color-from-palette($Light_primary-palette, 800);
+$Light_primary-900: mat.get-color-from-palette($Light_primary-palette, 900);
+
+@mixin lightPrimary($value){
+  background-color: mat.get-color-from-palette($Light_primary-palette,$value);
+}
+
+//map of Light accent colors
+$Light_accent-100: mat.get-color-from-palette($Light_accent-palette, 100);
+$Light_accent-200: mat.get-color-from-palette($Light_accent-palette, 200);
+$Light_accent-300: mat.get-color-from-palette($Light_accent-palette, 300);
+$Light_accent-400: mat.get-color-from-palette($Light_accent-palette, 400);
+$Light_accent-500: mat.get-color-from-palette($Light_accent-palette, 500);
+$Light_accent-600: mat.get-color-from-palette($Light_accent-palette, 600);
+$Light_accent-700: mat.get-color-from-palette($Light_accent-palette, 700);
+$Light_accent-800: mat.get-color-from-palette($Light_accent-palette, 800);
+$Light_accent-900: mat.get-color-from-palette($Light_accent-palette, 900);
+
+//map of Light warn colors
+$Light_warn-100: mat.get-color-from-palette($Light_warn-palette, 100);
+$Light_warn-200: mat.get-color-from-palette($Light_warn-palette, 200);
+$Light_warn-300: mat.get-color-from-palette($Light_warn-palette, 300);
+$Light_warn-400: mat.get-color-from-palette($Light_warn-palette, 400);
+$Light_warn-500: mat.get-color-from-palette($Light_warn-palette, 500);
+$Light_warn-600: mat.get-color-from-palette($Light_warn-palette, 600);
+$Light_warn-700: mat.get-color-from-palette($Light_warn-palette, 700);
+$Light_warn-800: mat.get-color-from-palette($Light_warn-palette, 800);
+$Light_warn-900: mat.get-color-from-palette($Light_warn-palette, 900);
+
+//map of dark primary colors
+$dark_primary-100: mat.get-color-from-palette($Dark_primary-palette, 100);
+$dark_primary-200: mat.get-color-from-palette($Dark_primary-palette, 200);
+$dark_primary-300: mat.get-color-from-palette($Dark_primary-palette, 300);
+$dark_primary-400: mat.get-color-from-palette($Dark_primary-palette, 400);
+$dark_primary-500: mat.get-color-from-palette($Dark_primary-palette, 500);
+$dark_primary-600: mat.get-color-from-palette($Dark_primary-palette, 600);
+$dark_primary-700: mat.get-color-from-palette($Dark_primary-palette, 700);
+$dark_primary-800: mat.get-color-from-palette($Dark_primary-palette, 800);
+$dark_primary-900: mat.get-color-from-palette($Dark_primary-palette, 900);
+
+//map of dark accent colors
+$dark_accent-100: mat.get-color-from-palette($Dark_accent-palette, 100);
+$dark_accent-200: mat.get-color-from-palette($Dark_accent-palette, 200);
+$dark_accent-300: mat.get-color-from-palette($Dark_accent-palette, 300);
+$dark_accent-400: mat.get-color-from-palette($Dark_accent-palette, 400);
+$dark_accent-500: mat.get-color-from-palette($Dark_accent-palette, 500);
+$dark_accent-600: mat.get-color-from-palette($Dark_accent-palette, 600);
+$dark_accent-700: mat.get-color-from-palette($Dark_accent-palette, 700);
+$dark_accent-800: mat.get-color-from-palette($Dark_accent-palette, 800);
+$dark_accent-900: mat.get-color-from-palette($Dark_accent-palette, 900);
+
+//map of dark warn colors
+$dark_warn-100: mat.get-color-from-palette($Dark_warn-palette, 100);
+$dark_warn-200: mat.get-color-from-palette($Dark_warn-palette, 200);
+$dark_warn-300: mat.get-color-from-palette($Dark_warn-palette, 300);
+$dark_warn-400: mat.get-color-from-palette($Dark_warn-palette, 400);
+$dark_warn-500: mat.get-color-from-palette($Dark_warn-palette, 500);
+$dark_warn-600: mat.get-color-from-palette($Dark_warn-palette, 600);
+$dark_warn-700: mat.get-color-from-palette($Dark_warn-palette, 700);
+$dark_warn-800: mat.get-color-from-palette($Dark_warn-palette, 800);
+$dark_warn-900: mat.get-color-from-palette($Dark_warn-palette, 900);
+
+$Light_background: map.get($Light_colorConfig, background);
+$Light_foreground: map.get($Light_colorConfig, foreground);
+
+$Dark_background: map.get($Dark_colorConfig, background);
+$Dark_foreground: map.get($Dark_colorConfig, foreground);
+
+
+$backgrounds: map.get($Light_foreground, base);
+$lkj: mat.get-color-from-palette($Light_foreground, divider);
+$is-dark-theme: map.get($Light_colorConfig, 'is-dark');
+
+
+
+//Typography Config
+$typography-config: mat.get-typography-config($light-theme);
+//$my-font-family: mat.font-family($typography-config);
+
+@mixin elevation($value){@include mat.elevation($value)}
+
+
+// .mat-button-focus-overlay {
+//  background-color: darkslateblue;
+//   overflow: visible;
+//   opacity: 1;
+//}
+//.mat-button-focus-overlay {
+  //background: map.get($Light_foreground, text);
+  //background: map.get($background, status-bar);
+//}
+
+//.mat-icon-button:hover {
+//   background-color: mat.color($background, hover);
+// }
+//@include mat.button-theme.theme($theme-or-color-config);
+
+//@include mat.strong-focus-indicators((
+//  border-style: solid,
+//  border-width: 2px,
+//  border-radius: 12px,
+//));
+//@include mat.strong-focus-indicators-theme($dark-theme);
+
+//.mat-button:hover {
+//  color: mat.get-color-from-palette($light-primary, darker-contrast);
+//  background-color: mat.get-color-from-palette($light-primary, 300);
+//  transform: scale(1.05);
+//  z-index: 1;
+//}
+
+//$kids-typography: mat.define-typography-config(
+//  // Specify "Comic Sans" as the default font family for all levels.
+//  $font-family: 'Comic Sans',
+//);
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+@include carousel.theme($light-theme);
+
+$icon-bgc:$Light_primary-600;
+
+.light {
+  background-color: $Light_primary-500
+}
+
+.dark {
+  background-color: $dark_primary-600;
+}
+
+#rightBar {
+  position: sticky;
+  //display: flex;
+  //flex-direction: column;
+  display: grid;
+  grid-row-gap: 11px ;
+  grid-template-columns: auto;
+  grid-auto-rows: 60px;
+  border-radius: 1em 0 0 1em;
+  color: white;
+
+  justify-content: center;
+  align-items: center;
+  button:hover{
+      background-color: $icon-bgc;
+      mat-icon{
+        font-size: 1.5rem;
+      }
+  }
+    button  *{
+      font-size: 1.4em;
+    }
+}

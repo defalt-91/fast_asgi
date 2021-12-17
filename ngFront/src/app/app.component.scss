@@ -1,0 +1,100 @@
+@use '@angular/material' as mat;
+:host {position: inherit;}
+.example-button {margin-top: 16px;}
+@mixin arman {background-color: #0078cf;}
+.example-tooltip-red {background: #b71c1c;}
+
+button {
+  //@include mat.elevation-transition();
+  //@include button-base.base;
+  //background-color: $primary-light;
+  &:hover {
+  //@include mat.elevation(1);
+  @include mat.ripple();
+    //@include mat.elevation(7)
+  }
+}
+mat-sidenav-container, body, document {
+  height: 100vh;
+}
+mat-sidenav-content {
+  // height: 100vh;
+  display: grid;
+  // overflow: visible;
+  grid-template-columns:auto 3rem;
+  grid-template-rows:auto auto 100%;
+  grid-template-areas:
+          'header header'
+          'progressBar progressBar'
+          'main right'
+}
+mat-toolbar {
+  grid-area: header;
+  display: grid;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  grid-template-rows: auto;
+  grid-template-columns:repeat(3, 1fr);
+  justify-content: space-around;
+}
+mat-progress-bar {
+  grid-area: progressBar;
+}
+#app-nav {
+  grid-area: main;
+  justify-content: center;
+  align-items: center;
+}
+app-sidebar {
+  grid-area: right;
+}
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  .btn-group {
+    .spn {
+      display: flex;
+
+      :nth-child(1) {
+        position: absolute;
+        right: 0;
+        top: 0;
+      }
+    }
+  }
+}
+
+.example-card {
+  max-width: 4vw;
+}
+
+.example-header-image {
+  background-image: url("https://material.angular.io/assets/img/examples/shiba1.jpg");
+  background-size: cover;
+  // background-attachment: fixed;
+  // background-repeat: no-repeat;
+  // border: 1px dashed black;
+  // padding: 25px;
+  // background-repeat: no-repeat;
+  // background-origin: content-box;
+}
+mat-toolbar.toolbar-card{
+  // height: auto;
+  position: relative;
+  height: 17vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  background-color: map-get(mat.$indigo-palette, 500);
+  button{
+    margin-left:3vw;
+  }
+}
+
+.header-image{
+  width: 7vh;
+  border-radius: 42vh;
+  margin-top: 16px;
+  margin-left: 10px;
+}
