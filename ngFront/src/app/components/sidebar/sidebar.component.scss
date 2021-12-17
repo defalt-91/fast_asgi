@@ -1,3 +1,6 @@
+@use "../../../colors" as colors;
+
+
 .dropdown-content {
   position: absolute;
   background-color: white;
@@ -83,3 +86,26 @@
   padding: 16px;
 }
 
+#rightBar {
+  position: sticky;
+  //display: flex;
+  //flex-direction: column;
+  display: grid;
+  grid-row-gap: 11px ;
+  grid-template-columns: auto;
+  grid-auto-rows: 60px;
+  border-radius: 1em 0 0 1em;
+  color: white;
+
+  justify-content: center;
+  align-items: center;
+  button:hover{
+      background-color: colors.$Light_primary-600;
+      mat-icon{
+        font-size: 1.5rem;
+      }
+  }
+    button  *{
+      font-size: 1.4em;
+    }
+}

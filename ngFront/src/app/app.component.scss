@@ -1,9 +1,11 @@
 @use '@angular/material' as mat;
+@use "sass:map";
+@use "../colors" as colors;
 :host {position: inherit;}
 .example-button {margin-top: 16px;}
 @mixin arman {background-color: #0078cf;}
-.example-tooltip-red {background: #b71c1c;}
-
+.example-tooltip-red {background: #afacac;}
+$light-primary:mat.$indigo-palette;
 button {
   //@include mat.elevation-transition();
   //@include button-base.base;
@@ -15,7 +17,7 @@ button {
   }
 }
 mat-sidenav-container, body, document {
-  height: 100vh;
+  height: 100%;
 }
 mat-sidenav-content {
   // height: 100vh;
@@ -46,7 +48,7 @@ mat-progress-bar {
   justify-content: center;
   align-items: center;
 }
-app-sidebar {
+sidebar {
   grid-area: right;
 }
 .toolbar {
@@ -98,3 +100,63 @@ mat-toolbar.toolbar-card{
   margin-top: 16px;
   margin-left: 10px;
 }
+
+
+mat-nav-list{
+
+  mat-accordion{
+
+    mat-expansion-panel{
+
+      a{
+
+        mat-icon{
+
+          padding-right: 1vw;
+
+        }
+
+      }
+
+    };
+
+  };
+
+};
+
+
+
+
+mat-sidenav-container{
+  
+  mat-sidenav{
+
+    mat-toolbar{
+      position: sticky;
+      top: 0;
+      min-width: 17vw;
+      min-height: 20vh;
+      // position: relative;
+      button:nth-last-child(1){
+        right: -2px;
+        bottom: 10px;
+        // position: absolute;
+      }
+    };
+
+  };
+  mat-sidenav-content{
+    mat-toolbar{
+      a{
+        // border:0.1rem solid map-get($map: $light-primary, $key: 800);
+        &:hover{
+          background-color: map-get($map: $light-primary, $key: 800);
+          // color: map.get(colors.$Light_colorConfig,background);
+          color: map.get(colors.$dark-warn,100);
+        }
+      }
+    }
+  }
+
+};
+// active-link

@@ -5,7 +5,7 @@ import { AppState }          from "src/app/store";
 
 @Component(
 	{
-		selector   : 'app-sidebar',
+		selector   : 'sidebar',
 		templateUrl: './sidebar.component.html',
 		styleUrls  : ['./sidebar.component.scss']
 	})

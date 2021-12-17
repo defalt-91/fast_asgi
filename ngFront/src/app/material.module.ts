@@ -46,7 +46,7 @@ import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 import {MatTabsModule} from '@angular/material/tabs';
 
 const Material = [
-	    A11yModule,
+	A11yModule,
     CdkAccordionModule,
     ClipboardModule,
     CdkStepperModule,
@@ -91,30 +91,7 @@ const Material = [
     OverlayModule,
     PortalModule,
     ScrollingModule,
-
-	
 	MatFormFieldModule,
-	MatToolbarModule,
-	MatButtonModule,
-	MatSidenavModule,
-	MatIconModule,
-	MatListModule,
-	MatInputModule,
-	MatDividerModule,
-	MatProgressBarModule,
-	MatSnackBarModule,
-	MatMenuModule,
-	MatProgressSpinnerModule,
-	MatCardModule,
-	MatRippleModule,
-	MatExpansionModule,
-	MatTooltipModule,
-	MatTreeModule,
-	MatTableModule,
-	MatPaginatorModule,
-	MatRadioModule,
-	MatListModule,
-	MatSidenavModule,
 ];
 
 @NgModule({imports:[...Material],exports: [...Material]})
